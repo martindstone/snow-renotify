@@ -1,0 +1,83 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_a99823efdc2c7de58feaa73fe3f11af5
+payload:
+  record_update:
+    $:
+      table: sys_atf_test
+    sys_atf_test:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      copied_from: ""
+      description: "The decision logic only (no records): which level is asked when,
+        and what a join, a decline or a stale reply does.\r
+
+        \r
+
+        Checks that:\r
+
+        - starts at level 1 and requests only that level\r
+
+        - a join stops the run and requests nothing else, however long
+        it waits\r
+
+        - a decline requests the next level immediately\r
+
+        - a cancelled request counts as a decline\r
+
+        - a level with two people waits until both decline, and stops
+        when either joins\r
+
+        - ignores a reply from someone who is not on the current level\r
+
+        - ignores a reply that predates the request it would answer\r
+
+        - starts over whatever happened before: asks A, then B, then C
+        even though A had declined earlier"
+      enable_parameterized_testing: "false"
+      fail_on_server_error: "true"
+      name: "PD: Renotify machine - levels, joins and declines"
+      parameters: ""
+      remember: ""
+      sn_atf_tg_generated: "false"
+      sys_class_name: sys_atf_test
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: a99823efdc2c7de58feaa73fe3f11af5
+      sys_mod_count: "0"
+      sys_name: "PD: Renotify machine - levels, joins and declines"
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_a99823efdc2c7de58feaa73fe3f11af5
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+    sys_variable_value:
+      $:
+        action: delete_multiple
+        query: document_key=a99823efdc2c7de58feaa73fe3f11af5
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: "PD: Renotify machine - levels, joins and declines"
+type: Test
+update_domain: global
+update_guid: d6bc575ac8ac2703cb7eca0095742962
+update_guid_history: d6bc575ac8ac2703cb7eca0095742962:0
+update_set:
+  $:
+    display_value: ""
+view: ""

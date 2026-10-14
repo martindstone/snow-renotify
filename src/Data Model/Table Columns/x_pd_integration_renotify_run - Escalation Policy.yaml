@@ -1,0 +1,105 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_dictionary_x_pd_integration_renotify_run_policy_name
+payload:
+  record_update:
+    sys_dictionary:
+      $:
+        action: INSERT_OR_UPDATE
+        element: policy_name
+        table: x_pd_integration_renotify_run
+      active: "true"
+      array: "false"
+      attributes: ""
+      audit: "false"
+      calculation: ""
+      choice: ""
+      choice_field: ""
+      choice_table: ""
+      column_label: Escalation Policy
+      comments: ""
+      create_roles: ""
+      default_value: ""
+      defaultsort: ""
+      delete_roles: ""
+      dependent: ""
+      dependent_on_field: ""
+      display: "false"
+      dynamic_creation: "false"
+      dynamic_creation_script: ""
+      dynamic_default_value: ""
+      dynamic_ref_qual: ""
+      element: policy_name
+      element_reference: "false"
+      foreign_database: ""
+      function_definition: ""
+      formula: ""
+      function_field: "false"
+      internal_type:
+        $:
+          display_value: String
+        _: string
+      mandatory: "false"
+      max_length: "255"
+      name: x_pd_integration_renotify_run
+      next_element: ""
+      primary: "false"
+      read_only: "false"
+      read_roles: ""
+      reference: ""
+      reference_cascade_rule: ""
+      reference_floats: "false"
+      reference_key: ""
+      reference_qual: ""
+      reference_qual_condition: ""
+      reference_type: ""
+      spell_check: "false"
+      staged: "false"
+      sys_class_name: sys_dictionary
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: 9e142deb7bf34114ae143e47c0d2f4dc
+      sys_name: Escalation Policy
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_dictionary_x_pd_integration_renotify_run_policy_name
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      table_reference: "false"
+      text_index: "false"
+      unique: "false"
+      use_dependent_field: "false"
+      use_dynamic_default: "false"
+      use_reference_qualifier: simple
+      virtual: "false"
+      virtual_type: script
+      widget: ""
+      write_roles: ""
+      xml_view: "false"
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: PagerDuty Renotify Runs.Escalation Policy
+type: Dictionary
+update_domain: global
+update_guid: 9e185b5ca78e41dfbcafc6f8c47fb1c8
+update_guid_history: 9e185b5ca78e41dfbcafc6f8c47fb1c8:404918025
+update_set:
+  $:
+    display_value: ""
+view: ""

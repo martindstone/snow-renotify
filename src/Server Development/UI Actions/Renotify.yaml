@@ -1,0 +1,101 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_ui_action_582b99e1349940ac9aa7b371738f1e64
+payload:
+  record_update:
+    $:
+      sys_domain: global
+      table: sys_ui_action
+    sys_ui_action:
+      $:
+        action: INSERT_OR_UPDATE
+      action_name: renotify_escalation_policy
+      active: "true"
+      client: "true"
+      client_script_v2: |-
+        function onClick(g_form) {
+
+        }
+      comments: ""
+      condition: "!gs.nil(current.x_pd_integration_incident) &&
+        gs.getProperty(\"x_pd_integration.enable_response_mobilizer\") == 'true'
+        && current.state < 6"
+      form_action: "true"
+      form_button: "true"
+      form_button_v2: "false"
+      form_context_menu: "false"
+      form_link: "false"
+      form_menu_button_v2: "false"
+      form_style: ""
+      format_for_configurable_workspace: "false"
+      hint: ""
+      isolate_script: "false"
+      list_action: "false"
+      list_banner_button: "false"
+      list_button: "false"
+      list_choice: "false"
+      list_context_menu: "false"
+      list_link: "false"
+      list_save_with_form_button: "false"
+      list_style: ""
+      messages: ""
+      name: Renotify
+      onclick: renotifyEscalationPolicyDialog()
+      order: "-174"
+      script: >
+        function renotifyEscalationPolicyDialog() {
+        	var snIncidentId = g_form.getUniqueValue();
+        	var gm = new GlideModal('x_pd_integration_renotify_dialog');
+            gm.setPreference('snIncidentId', snIncidentId);
+        	gm.setTitle('Renotify');
+            gm.setWidth(700);
+            gm.render();
+        }
+      show_insert: "false"
+      show_multiple_update: "false"
+      show_query: "false"
+      show_update: "true"
+      sys_class_name: sys_ui_action
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_domain: global
+      sys_domain_path: /
+      sys_id: 582b99e1349940ac9aa7b371738f1e64
+      sys_mod_count: "0"
+      sys_name: Renotify
+      sys_overrides: ""
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_ui_action_582b99e1349940ac9aa7b371738f1e64
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      table: incident
+      ui11_compatible: "true"
+      ui16_compatible: "false"
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: incident
+target_name: Renotify
+type: UI Action
+update_domain: global
+update_guid: 42544142b58749fcb1bf4e7c4f52e496
+update_guid_history: 42544142b58749fcb1bf4e7c4f52e496:1978488233
+update_set:
+  $:
+    display_value: ""
+view: ""

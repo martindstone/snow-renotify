@@ -1,0 +1,73 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_db_object_5e5496f8a51f41798731104ef0e8777e
+payload:
+  record_update:
+    $:
+      table: sys_db_object
+    sys_db_object:
+      $:
+        action: INSERT_OR_UPDATE
+      access: public
+      actions_access: "false"
+      alter_access: "false"
+      client_scripts_access: "false"
+      configuration_access: "false"
+      create_access: "false"
+      create_access_controls: "true"
+      delete_access: "false"
+      extension_model: ""
+      is_extendable: "false"
+      label: PagerDuty Renotify Runs
+      live_feed_enabled: "false"
+      name: x_pd_integration_renotify_run
+      provider_class: ""
+      read_access: "true"
+      super_class: ""
+      sys_class_code: ""
+      sys_class_name: sys_db_object
+      sys_class_path: ""
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: 5e5496f8a51f41798731104ef0e8777e
+      sys_mod_count: "0"
+      sys_name: PagerDuty Renotify Runs
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_db_object_5e5496f8a51f41798731104ef0e8777e
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      update_access: "false"
+      user_role:
+        $:
+          display_value: x_pd_integration.admin
+          name: x_pd_integration.admin
+        _: f2d919a64f834e00dd657bb28110c7fd
+      ws_access: "true"
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: PagerDuty Renotify Runs
+type: Table
+update_domain: global
+update_guid: 477a5057c3c3461a839cef4417c7837c
+update_guid_history: 477a5057c3c3461a839cef4417c7837c:-1936212729
+update_set:
+  $:
+    display_value: ""
+view: ""

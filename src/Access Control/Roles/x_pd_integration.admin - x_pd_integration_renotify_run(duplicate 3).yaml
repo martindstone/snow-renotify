@@ -1,0 +1,57 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_security_acl_role_031e1408e09c46e39464ee4f226796b8
+payload:
+  record_update:
+    $:
+      table: sys_security_acl_role
+    sys_security_acl_role:
+      $:
+        action: INSERT_OR_UPDATE
+      sys_class_name: sys_security_acl_role
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: 031e1408e09c46e39464ee4f226796b8
+      sys_mod_count: "0"
+      sys_name: x_pd_integration_renotify_run.x_pd_integration.admin
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_security_acl:
+        $:
+          display_value: x_pd_integration_renotify_run
+        _: 5ddea9f37754423683d56ddfa831f12f
+      sys_update_name: sys_security_acl_role_031e1408e09c46e39464ee4f226796b8
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      sys_user_role:
+        $:
+          display_value: x_pd_integration.admin
+          name: x_pd_integration.admin
+        _: f2d919a64f834e00dd657bb28110c7fd
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: x_pd_integration_renotify_run.x_pd_integration.admin
+type: Access Roles
+update_domain: global
+update_guid: 43f158a61168424a88c8e1c3ab380e0c
+update_guid_history: 43f158a61168424a88c8e1c3ab380e0c:1617579344
+update_set:
+  $:
+    display_value: ""
+view: ""

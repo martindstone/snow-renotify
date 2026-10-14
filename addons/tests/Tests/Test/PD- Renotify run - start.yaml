@@ -1,0 +1,88 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_37a1616a0b8179486003b81acf878ba9
+payload:
+  record_update:
+    $:
+      table: sys_atf_test
+    sys_atf_test:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      copied_from: ""
+      description: "Starting a run: level 1 only, the saved run, the checks before
+        anything is sent, and the person clicking asked on behalf of another
+        user.\r
+
+        \r
+
+        Checks that:\r
+
+        - requests only level 1, as the user who clicked, and records an
+        active run\r
+
+        - keeps everything it needs to continue in the run\r
+
+        - asks PagerDuty for on-calls with a query the platform accepts,
+        and only for this policy\r
+
+        - refuses a second run for the same incident and policy while
+        one is active\r
+
+        - rejects a user with no PagerDuty mapping before anything is
+        sent\r
+
+        - rejects an incident that does not exist, or is not linked to
+        PagerDuty\r
+
+        - puts the person clicking on level 1 into a separate request
+        made on behalf of another user\r
+
+        - with no other user to ask on behalf of, still sends the
+        request and carries on"
+      enable_parameterized_testing: "false"
+      fail_on_server_error: "true"
+      name: "PD: Renotify run - start"
+      parameters: ""
+      remember: ""
+      sn_atf_tg_generated: "false"
+      sys_class_name: sys_atf_test
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: 37a1616a0b8179486003b81acf878ba9
+      sys_mod_count: "0"
+      sys_name: "PD: Renotify run - start"
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_37a1616a0b8179486003b81acf878ba9
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+    sys_variable_value:
+      $:
+        action: delete_multiple
+        query: document_key=37a1616a0b8179486003b81acf878ba9
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: "PD: Renotify run - start"
+type: Test
+update_domain: global
+update_guid: d13c12fd651ba2c1f41500aa3b8b4245
+update_guid_history: d13c12fd651ba2c1f41500aa3b8b4245:0
+update_set:
+  $:
+    display_value: ""
+view: ""

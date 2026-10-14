@@ -1,0 +1,61 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_documentation_x_pd_integration_renotify_run_policy_name_en
+payload:
+  record_update:
+    sys_documentation:
+      $:
+        element: policy_name
+        label: Escalation Policy
+        language: en
+        table: x_pd_integration_renotify_run
+      sys_documentation:
+        $:
+          action: INSERT_OR_UPDATE
+        element: policy_name
+        help: ""
+        hint: ""
+        label: Escalation Policy
+        language: en
+        name: x_pd_integration_renotify_run
+        plural: Escalation Policies
+        sys_class_name: sys_documentation
+        sys_created_by: PagerDuty
+        sys_created_on: 2026-10-08 17:30:00
+        sys_id: a4f76eae90a3485da8d9d9c4cb413a61
+        sys_mod_count: "0"
+        sys_name: Escalation Policy
+        sys_package:
+          $:
+            display_value: PagerDuty Incident Resolution Platform
+            source: x_pd_integration
+          _: 39a9d9664f834e00dd657bb28110c77b
+        sys_policy: ""
+        sys_scope:
+          $:
+            display_value: PagerDuty Incident Resolution Platform
+          _: 39a9d9664f834e00dd657bb28110c77b
+        sys_update_name: sys_documentation_x_pd_integration_renotify_run_policy_name_en
+        sys_updated_by: PagerDuty
+        sys_updated_on: 2026-10-08 17:30:00
+        url: ""
+        url_target: ""
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: PagerDuty Renotify Runs.Escalation Policy
+type: Field Label
+update_domain: global
+update_guid: 016304cb47c54b11ac91c86e23a2493e
+update_guid_history: 016304cb47c54b11ac91c86e23a2493e:531580006
+update_set:
+  $:
+    display_value: ""
+view: ""

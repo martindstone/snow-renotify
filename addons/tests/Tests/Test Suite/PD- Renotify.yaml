@@ -1,0 +1,54 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_suite_aaa26ac99d9f78945ac8827a7cfb2881
+payload:
+  record_update:
+    $:
+      table: sys_atf_test_suite
+    sys_atf_test_suite:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      description: Tests of the Renotify Escalation Policy overlay. They run the real
+        Script Includes against a fake PagerDuty and a fake clock, so no
+        PagerDuty account, WireMock or waiting is needed. The only records they
+        create are runs and webhook rows of their own, which they remove again.
+        The overlay itself ("PagerDuty Renotify v…") must be installed first.
+      name: "PD: Renotify"
+      parent: ""
+      sys_class_name: sys_atf_test_suite
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: aaa26ac99d9f78945ac8827a7cfb2881
+      sys_mod_count: "0"
+      sys_name: "PD: Renotify"
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_suite_aaa26ac99d9f78945ac8827a7cfb2881
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: "PD: Renotify"
+type: Test Suite
+update_domain: global
+update_guid: f155d5478694acec6356a8a969ee48d4
+update_guid_history: f155d5478694acec6356a8a969ee48d4:0
+update_set:
+  $:
+    display_value: ""
+view: ""

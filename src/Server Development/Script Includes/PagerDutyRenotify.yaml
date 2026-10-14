@@ -1,0 +1,59 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_script_include_b22ce7b6e44345108dcc9e7ce8db9e10
+payload:
+  record_update:
+    $:
+      table: sys_script_include
+    sys_script_include:
+      $:
+        action: INSERT_OR_UPDATE
+      access: package_private
+      active: "true"
+      api_name: x_pd_integration.PagerDutyRenotify
+      caller_access: ""
+      client_callable: "false"
+      description: "Renotifies an escalation policy on a PagerDuty incident level by level"
+      mobile_callable: "false"
+      name: PagerDutyRenotify
+      sandbox_callable: "false"
+      script:
+        $ref: PagerDutyRenotify.js
+      sys_class_name: sys_script_include
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: b22ce7b6e44345108dcc9e7ce8db9e10
+      sys_mod_count: "0"
+      sys_name: PagerDutyRenotify
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_script_include_b22ce7b6e44345108dcc9e7ce8db9e10
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: PagerDutyRenotify
+type: Script Include
+update_domain: global
+update_guid: ff3c22d9cc6c4bb981605f0b1977a485
+update_guid_history: ff3c22d9cc6c4bb981605f0b1977a485:-335726257
+update_set:
+  $:
+    display_value: ""
+view: ""

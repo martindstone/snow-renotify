@@ -1,0 +1,41 @@
+$:
+  action: INSERT_OR_UPDATE
+application:
+  _: 39a9d9664f834e00dd657bb28110c77b
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+application_name: PagerDuty Incident Resolution Platform
+application_scope: x_pd_integration
+application_version: 1.0.0
+collisions: ""
+commit_date: ""
+deleted: ""
+description: "Renotify escalation policies from ServiceNow (overlay for the PagerDuty integration)"
+inserted: ""
+name: PagerDuty Renotify v1.0.0
+origin_sys_id: ""
+parent:
+  $:
+    display_value: ""
+release_date: ""
+remote_base_update_set:
+  $:
+    display_value: ""
+remote_parent_id: ""
+remote_sys_id: 9337aac5994148daa55c210fa9d922cf
+state: loaded
+summary: ""
+sys_class_name: sys_remote_update_set
+sys_created_by: pd-ep-renotify
+sys_created_on: 2022-05-06 16:46:32
+sys_id: aa757479f9b74633a869c79db5c8785a
+sys_mod_count: "0"
+sys_updated_by: pd-ep-renotify
+sys_updated_on: 2022-05-06 16:46:32
+update_set:
+  $:
+    display_value: ""
+update_source:
+  $:
+    display_value: ""
+updated: ""

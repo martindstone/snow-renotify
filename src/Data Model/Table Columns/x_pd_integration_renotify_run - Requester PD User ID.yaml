@@ -1,0 +1,105 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_dictionary_x_pd_integration_renotify_run_requester_pd_id
+payload:
+  record_update:
+    sys_dictionary:
+      $:
+        action: INSERT_OR_UPDATE
+        element: requester_pd_id
+        table: x_pd_integration_renotify_run
+      active: "true"
+      array: "false"
+      attributes: ""
+      audit: "false"
+      calculation: ""
+      choice: ""
+      choice_field: ""
+      choice_table: ""
+      column_label: Requester PD User ID
+      comments: ""
+      create_roles: ""
+      default_value: ""
+      defaultsort: ""
+      delete_roles: ""
+      dependent: ""
+      dependent_on_field: ""
+      display: "false"
+      dynamic_creation: "false"
+      dynamic_creation_script: ""
+      dynamic_default_value: ""
+      dynamic_ref_qual: ""
+      element: requester_pd_id
+      element_reference: "false"
+      foreign_database: ""
+      function_definition: ""
+      formula: ""
+      function_field: "false"
+      internal_type:
+        $:
+          display_value: String
+        _: string
+      mandatory: "false"
+      max_length: "40"
+      name: x_pd_integration_renotify_run
+      next_element: ""
+      primary: "false"
+      read_only: "false"
+      read_roles: ""
+      reference: ""
+      reference_cascade_rule: ""
+      reference_floats: "false"
+      reference_key: ""
+      reference_qual: ""
+      reference_qual_condition: ""
+      reference_type: ""
+      spell_check: "false"
+      staged: "false"
+      sys_class_name: sys_dictionary
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: 61bc3d5711694a14aa0a660e65e45fc5
+      sys_name: Requester PD User ID
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_dictionary_x_pd_integration_renotify_run_requester_pd_id
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      table_reference: "false"
+      text_index: "false"
+      unique: "false"
+      use_dependent_field: "false"
+      use_dynamic_default: "false"
+      use_reference_qualifier: simple
+      virtual: "false"
+      virtual_type: script
+      widget: ""
+      write_roles: ""
+      xml_view: "false"
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: PagerDuty Renotify Runs.Requester PD User ID
+type: Dictionary
+update_domain: global
+update_guid: 64bf3e6369e14e389194e0abc51e358e
+update_guid_history: 64bf3e6369e14e389194e0abc51e358e:-773512563
+update_set:
+  $:
+    display_value: ""
+view: ""

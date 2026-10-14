@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<g:evaluate var="jvar_stamp" expression="new Date().getTime()" />
+<script language="javascript" src="x_pd_integration.AjaxHelper.jsdbx?v=${HTML:jvar_stamp}"></script>
+
+<g:evaluate>
+  var pdLogo = gs.getProperty('x_pd_integration.pd_logo');
+</g:evaluate>
+
+<form class="form_body form-horizontal pd-renotify-form">
+  <style>
+    .pd-renotify-form {
+      margin: 1rem;
+    }
+
+    .pd-renotify-form .form_body {
+      background-color: #fff;
+    }
+
+    .pd-renotify-form table {
+      width: 100%;
+    }
+
+    .pd-renotify-form td, .pd-renotify-form th {
+      padding: 0.5rem;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .pd-renotify-form h4 {
+      margin: 1rem 0 0.25rem 0;
+    }
+
+    .pd-renotify-form .pd-renotify-picker {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .pd-renotify-form .pd-renotify-select {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .pd-renotify-form .pd-renotify-loading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.5rem 0.5rem;
+      color: #4b5563;
+    }
+
+    .pd-renotify-form .pd-renotify-spinner {
+      display: inline-block;
+      flex: none;
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 3px solid #d1d5db;
+      border-top-color: #06ac38;
+      border-radius: 50%;
+      animation: pd-renotify-spin 0.8s linear infinite;
+    }
+
+    .pd-renotify-form .pd-renotify-spinner.small {
+      width: 0.9rem;
+      height: 0.9rem;
+      border-width: 2px;
+    }
+
+    @keyframes pd-renotify-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pd-renotify-form .pd-renotify-spinner { animation-duration: 3s; }
+    }
+
+    .pd-renotify-form .pd-renotify-status {
+      margin: 0.75rem 0 1rem 0;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-left-width: 4px;
+      border-radius: 4px;
+    }
+
+    .pd-renotify-form .pd-renotify-status.tone-info { border-left-color: #2563eb; }
+    .pd-renotify-form .pd-renotify-status.tone-good { border-left-color: #16a34a; }
+    .pd-renotify-form .pd-renotify-status.tone-warn { border-left-color: #d97706; }
+    .pd-renotify-form .pd-renotify-status.tone-bad { border-left-color: #dc2626; }
+    .pd-renotify-form .pd-renotify-status.tone-muted { border-left-color: #9ca3af; }
+
+    .pd-renotify-form .pd-status-kind {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .pd-renotify-form .pd-kind-tag {
+      display: inline-block;
+      padding: 0 0.5rem;
+      border: 1px solid currentColor;
+      border-radius: 3px;
+      font-size: 0.75em;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .pd-renotify-form .pd-kind-tag.policy { color: #4338ca; }
+    .pd-renotify-form .pd-kind-tag.individual { color: #0f766e; }
+
+    .pd-renotify-form .pd-kind-name {
+      font-size: 1.15em;
+      font-weight: bold;
+    }
+
+    .pd-renotify-form .pd-status-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.75rem;
+    }
+
+    .pd-renotify-form .pd-status-title {
+      font-size: 1.15em;
+      font-weight: bold;
+    }
+
+    .pd-renotify-form .pd-badge {
+      display: inline-block;
+      padding: 0.1rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.85em;
+      font-weight: bold;
+      white-space: nowrap;
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .pd-renotify-form .pd-badge.tone-info { background: #dbeafe; color: #1e40af; }
+    .pd-renotify-form .pd-badge.tone-good { background: #dcfce7; color: #166534; }
+    .pd-renotify-form .pd-badge.tone-warn { background: #fef3c7; color: #92400e; }
+    .pd-renotify-form .pd-badge.tone-bad { background: #fee2e2; color: #991b1b; }
+
+    .pd-renotify-form .pd-status-facts {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: 0.25rem 1rem;
+      margin: 0.6rem 0 0 0;
+    }
+
+    .pd-renotify-form .pd-status-facts dt {
+      color: #6b7280;
+      font-weight: normal;
+    }
+
+    .pd-renotify-form .pd-status-facts dd {
+      margin: 0;
+    }
+
+    .pd-renotify-form .pd-status-error {
+      color: #991b1b;
+    }
+
+    .pd-renotify-form .pd-renotify-details summary {
+      cursor: pointer;
+      margin-bottom: 0.5rem;
+      list-style: none;
+      font-weight: bold;
+    }
+
+    .pd-renotify-form .pd-renotify-details summary::-webkit-details-marker { display: none; }
+
+    .pd-renotify-form .pd-renotify-details summary::before {
+      content: '\25B8';
+      display: inline-block;
+      width: 1.2em;
+    }
+
+    .pd-renotify-form .pd-renotify-details[open] summary::before {
+      content: '\25BE';
+    }
+
+    .pd-renotify-form .pd-renotify-hint {
+      color: #6b7280;
+      margin-bottom: 1rem;
+    }
+  </style>
+
+  <div class="row">
+    <div class="col-sm-12">
+      <p class="pd-renotify-hint">
+        <b>Escalation policy:</b>&#160;ServiceNow will notify the people currently on call, level by level, as if the
+        policy had just been added: it stops as soon as someone joins, and moves to the next level when everyone on
+        a level declines or the level's delay passes.<br/>
+        <b>Individual:</b>&#160;Asks that one person again, however they were added.
+      </p>
+      <div class="pd-renotify-loading" role="status">
+        <span class="pd-renotify-spinner" aria-hidden="true"></span>
+        <span>Loading escalation policies and responders from this incident…</span>
+      </div>
+      <div class="pd-renotify-message" style="display: none"></div>
+      <div class="pd-renotify-picker" style="display: none">
+        <select class="form-control pd-renotify-select" aria-label="Escalation policy or individual to renotify"></select>
+        <button class="btn btn-primary pd-renotify-go" disabled="disabled">Renotify</button>
+      </div>
+      <div class="pd-renotify-status" aria-live="polite" style="display: none"></div>
+      <details class="pd-renotify-details" style="display: none">
+        <summary>Full status</summary>
+        <h4 class="pd-renotify-policies-heading" style="display: none">Escalation policies</h4>
+        <table class="pd-renotify-table" style="display: none">
+          <thead>
+            <tr><th>Escalation policy</th><th>Status</th></tr>
+          </thead>
+          <tbody class="pd-renotify-rows"></tbody>
+        </table>
+        <h4 class="pd-renotify-people-heading" style="display: none">Individuals</h4>
+        <table class="pd-renotify-people" style="display: none">
+          <thead>
+            <tr><th>Responder</th><th>Status</th><th>Added</th></tr>
+          </thead>
+          <tbody class="pd-renotify-people-rows"></tbody>
+        </table>
+      </details>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top: 2rem">
+    <div class="col-sm-12">
+      <div class="pull-left" style="padding: 6px 9px;">
+        <img width="120" alt="PagerDuty Logo" src="${HTML:pdLogo}" />
+      </div>
+      <div class="pull-right">
+        <button class="btn btn-default submit-cancel">Close</button>
+      </div>
+    </div>
+  </div>
+</form>
+</j:jelly>

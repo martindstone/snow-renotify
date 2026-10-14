@@ -1,0 +1,385 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_ui_section_77f6a0c9bb5c43bfa2b48587f4d1d702
+payload:
+  record_update:
+    sys_ui_section:
+      $:
+        caption: ""
+        section_id: 77f6a0c9bb5c43bfa2b48587f4d1d702
+        sys_domain: global
+        table: x_pd_integration_renotify_run
+        version: "3"
+        view: ""
+      sys_ui_element:
+        - $:
+            action: INSERT_OR_UPDATE
+          element: .begin_split
+          position: "0"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 3f2323b5d5194920a8b25f970e2d1451
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: .begin_split
+        - $:
+            action: INSERT_OR_UPDATE
+          element: policy_name
+          position: "1"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 18f0454bcf4d45b998f22874f462bb05
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: incident
+          position: "2"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: f628c139725046c8b3446be9faeadbbf
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: pd_incident_id
+          position: "3"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 6401ce857d604f2fba231121aceac220
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: pd_policy_id
+          position: "4"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: aca818729c1f413a96f0b0f562c3fcc2
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: .split
+          position: "5"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 4761b5e711fe4bd5b6f3c7a6cd9ff9c8
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: .split
+        - $:
+            action: INSERT_OR_UPDATE
+          element: state
+          position: "6"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 9d39f6eae54448648e4272270ddef78f
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: active
+          position: "7"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 0b2d10f2a6524022a9482c65d987100b
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: level
+          position: "8"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 2eca2200b567444089a5c39edea972cd
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: loop
+          position: "9"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: cc838d1695484e748063763effc75ab6
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: requester_pd_id
+          position: "10"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 4cbdecaf4fc44baf8fffe96ab849d669
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: .end_split
+          position: "11"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 0a85b304e80b45c38fc96adb87ce4462
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: .end_split
+        - $:
+            action: INSERT_OR_UPDATE
+          element: last_error
+          position: "12"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: bddd258c3f624b1b902775c877cf248a
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: pending_actions
+          position: "13"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: 53e94fe1db3a472a95d09a99cf665728
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+        - $:
+            action: INSERT_OR_UPDATE
+          element: run_json
+          position: "14"
+          sys_created_by: PagerDuty
+          sys_created_on: 2026-10-08 17:30:00
+          sys_id: cf6eb8ead18d4aae93da092a01b9ed6a
+          sys_mod_count: "0"
+          sys_ui_formatter: ""
+          sys_ui_section:
+            $:
+              caption: "NULL"
+              display_value: ""
+              name: x_pd_integration_renotify_run
+              sys_domain: global
+              view: Default view
+            _: 77f6a0c9bb5c43bfa2b48587f4d1d702
+          sys_updated_by: PagerDuty
+          sys_updated_on: 2026-10-08 17:30:00
+          sys_user: ""
+          type: 
+      sys_ui_section:
+        $:
+          action: INSERT_OR_UPDATE
+        caption: ""
+        header: "false"
+        name: x_pd_integration_renotify_run
+        roles: ""
+        sys_class_name: sys_ui_section
+        sys_created_by: PagerDuty
+        sys_created_on: 2026-10-08 17:30:00
+        sys_domain: global
+        sys_domain_path: /
+        sys_id: 77f6a0c9bb5c43bfa2b48587f4d1d702
+        sys_mod_count: "0"
+        sys_name: x_pd_integration_renotify_run
+        sys_overrides: ""
+        sys_package:
+          $:
+            display_value: PagerDuty Incident Resolution Platform
+            source: x_pd_integration
+          _: 39a9d9664f834e00dd657bb28110c77b
+        sys_policy: ""
+        sys_scope:
+          $:
+            display_value: PagerDuty Incident Resolution Platform
+          _: 39a9d9664f834e00dd657bb28110c77b
+        sys_update_name: sys_ui_section_77f6a0c9bb5c43bfa2b48587f4d1d702
+        sys_updated_by: PagerDuty
+        sys_updated_on: 2026-10-08 17:30:00
+        sys_user: ""
+        title: "true"
+        view:
+          $:
+            display_value: Default view
+            name: "NULL"
+          _: Default view
+        view_name: ""
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: PagerDuty Renotify Runs
+type: Form Layout
+update_domain: global
+update_guid: 87a50d01ad554bc49555f6f6fa1a1619
+update_guid_history: 87a50d01ad554bc49555f6f6fa1a1619:-635951710
+update_set:
+  $:
+    display_value: ""
+view: ""

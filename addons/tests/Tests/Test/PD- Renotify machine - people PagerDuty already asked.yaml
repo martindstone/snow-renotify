@@ -1,0 +1,74 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_70c27b777aaa91ec0fa80a1ded41bd98
+payload:
+  record_update:
+    $:
+      table: sys_atf_test
+    sys_atf_test:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      copied_from: ""
+      description: "The decision logic only: answers from people PagerDuty asked
+        itself count from PagerDuty's own request time.\r
+
+        \r
+
+        Checks that:\r
+
+        - counts their answer from the moment PagerDuty asked them, not
+        from when the level was requested\r
+
+        - still ignores an answer from before PagerDuty asked them\r
+
+        - only knows people of the current level, and leaves the rest on
+        the level's own request time\r
+
+        - forgets who was asked when the next level starts"
+      enable_parameterized_testing: "false"
+      fail_on_server_error: "true"
+      name: "PD: Renotify machine - people PagerDuty already asked"
+      parameters: ""
+      remember: ""
+      sn_atf_tg_generated: "false"
+      sys_class_name: sys_atf_test
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: 70c27b777aaa91ec0fa80a1ded41bd98
+      sys_mod_count: "0"
+      sys_name: "PD: Renotify machine - people PagerDuty already asked"
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_70c27b777aaa91ec0fa80a1ded41bd98
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+    sys_variable_value:
+      $:
+        action: delete_multiple
+        query: document_key=70c27b777aaa91ec0fa80a1ded41bd98
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: "PD: Renotify machine - people PagerDuty already asked"
+type: Test
+update_domain: global
+update_guid: 5cd2a87f1fe8b9c5db23b9a38d8ed871
+update_guid_history: 5cd2a87f1fe8b9c5db23b9a38d8ed871:0
+update_set:
+  $:
+    display_value: ""
+view: ""

@@ -1,0 +1,84 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_b85f7b5dde019a7dbea5676b1d0f7837
+payload:
+  record_update:
+    $:
+      table: sys_atf_test
+    sys_atf_test:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      copied_from: ""
+      description: "The decision logic only: level delays, the policy's loops,
+        exhaustion, shift changes, and when a level counts as due.\r
+
+        \r
+
+        Checks that:\r
+
+        - moves on only after the level delay\r
+
+        - repeats the levels for the policy's loops and then is
+        exhausted: 3 levels x (1 + 3 loops) = 12 requests\r
+
+        - a policy with no rules is exhausted at once\r
+
+        - resolves the people on call when each level is reached, so a
+        shift change counts\r
+
+        - skips a level with nobody on call\r
+
+        - stops when the incident is resolved\r
+
+        - counts a level as due when its delay expired, not when the
+        timer noticed\r
+
+        - counts a level as due when PagerDuty stamped the decline,
+        unless that is missing or in the future"
+      enable_parameterized_testing: "false"
+      fail_on_server_error: "true"
+      name: "PD: Renotify machine - timeouts, loops and the end"
+      parameters: ""
+      remember: ""
+      sn_atf_tg_generated: "false"
+      sys_class_name: sys_atf_test
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: b85f7b5dde019a7dbea5676b1d0f7837
+      sys_mod_count: "0"
+      sys_name: "PD: Renotify machine - timeouts, loops and the end"
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_b85f7b5dde019a7dbea5676b1d0f7837
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+    sys_variable_value:
+      $:
+        action: delete_multiple
+        query: document_key=b85f7b5dde019a7dbea5676b1d0f7837
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: "PD: Renotify machine - timeouts, loops and the end"
+type: Test
+update_domain: global
+update_guid: 50891f9dfc81c01e6aef3f0eab3159e7
+update_guid_history: 50891f9dfc81c01e6aef3f0eab3159e7:0
+update_set:
+  $:
+    display_value: ""
+view: ""

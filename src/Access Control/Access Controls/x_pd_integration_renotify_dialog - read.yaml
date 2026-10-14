@@ -1,0 +1,63 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_security_acl_fe625553a2b54b529a720ca7bb5216d9
+payload:
+  record_update:
+    $:
+      table: sys_security_acl
+    sys_security_acl:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      admin_overrides: "true"
+      advanced: "false"
+      condition: ""
+      description: ""
+      name: x_pd_integration_renotify_dialog
+      operation:
+        $:
+          display_value: read
+        _: read
+      script: ""
+      sys_class_name: sys_security_acl
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: fe625553a2b54b529a720ca7bb5216d9
+      sys_mod_count: "0"
+      sys_name: x_pd_integration_renotify_dialog
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_security_acl_fe625553a2b54b529a720ca7bb5216d9
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      type:
+        $:
+          display_value: ui_page
+        _: ui_page
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: x_pd_integration_renotify_dialog
+type: Access Control
+update_domain: global
+update_guid: 0cb0ab6680c64154b7cdcb762f542945
+update_guid_history: 0cb0ab6680c64154b7cdcb762f542945:81788709
+update_set:
+  $:
+    display_value: ""
+view: ""

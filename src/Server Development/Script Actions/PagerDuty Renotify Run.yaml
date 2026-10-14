@@ -1,0 +1,73 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sysevent_script_action_2aab81d8144e4e53848d2c545a0ae014
+payload:
+  record_update:
+    $:
+      sys_domain: global
+      table: sysevent_script_action
+    sys_es_latest_script:
+      $:
+        action: INSERT_OR_UPDATE
+      id: 2aab81d8144e4e53848d2c545a0ae014
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: b11255d5463d42709cff91c6300191cb
+      sys_mod_count: "0"
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      table: sysevent_script_action
+      use_es_latest: "true"
+    sysevent_script_action:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      condition_script: ""
+      description: ""
+      event_name: x_pd_integration.renotify_run
+      name: PagerDuty Renotify Run
+      order: "100"
+      script:
+        $ref: PagerDuty Renotify Run.js
+      synchronous: "false"
+      sys_class_name: sysevent_script_action
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_domain: global
+      sys_domain_path: /
+      sys_id: 2aab81d8144e4e53848d2c545a0ae014
+      sys_mod_count: "0"
+      sys_name: PagerDuty Renotify Run
+      sys_overrides: ""
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sysevent_script_action_2aab81d8144e4e53848d2c545a0ae014
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration.renotify_run
+target_name: PagerDuty Renotify Run
+type: Script Action
+update_domain: global
+update_guid: ee4946756e9f4490b016bd2ea7b8d08a
+update_guid_history: ee4946756e9f4490b016bd2ea7b8d08a:-1891861898
+update_set:
+  $:
+    display_value: ""
+view: ""

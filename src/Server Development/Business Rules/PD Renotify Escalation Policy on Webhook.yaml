@@ -1,0 +1,82 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_script_864d3ad771664f51a4f2892083ae57dd
+payload:
+  record_update:
+    $:
+      sys_domain: global
+      table: sys_script
+    sys_script:
+      $:
+        action: INSERT_OR_UPDATE
+      abort_action: "false"
+      access: package_private
+      action_delete: "false"
+      action_insert: "true"
+      action_query: "false"
+      action_update: "false"
+      active: "true"
+      add_message: "false"
+      advanced: "true"
+      change_fields: "false"
+      client_callable: "false"
+      collection: x_pd_integration_webhook_import
+      condition: current.message_type == 'incident.responder.replied' || current.message_type == 'incident.resolved'
+      description: Feeds responder replies and incident resolution to escalation policy renotification runs
+      execute_function: "false"
+      is_rest: "false"
+      message: ""
+      name: PD Renotify Escalation Policy on Webhook
+      order: "200"
+      priority: "100"
+      rest_method: ""
+      rest_method_text: ""
+      rest_service: ""
+      rest_service_text: ""
+      rest_variables: ""
+      role_conditions: ""
+      script:
+        $ref: PD Renotify Escalation Policy on Webhook.js
+      sys_class_name: sys_script
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 18:00:00
+      sys_domain: global
+      sys_domain_path: /
+      sys_id: 864d3ad771664f51a4f2892083ae57dd
+      sys_mod_count: "0"
+      sys_name: PD Renotify Escalation Policy on Webhook
+      sys_overrides: ""
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_script_864d3ad771664f51a4f2892083ae57dd
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 18:00:00
+      template: ""
+      when: after
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_webhook_import
+target_name: PD Renotify Escalation Policy on Webhook
+type: Business Rule
+update_domain: global
+update_guid: 6fbddab0f9c1456db7e9b415c02c9f0d
+update_guid_history: 6fbddab0f9c1456db7e9b415c02c9f0d:-1214884101
+update_set:
+  $:
+    display_value: ""
+view: ""

@@ -1,0 +1,79 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_app_module_783d8340a0f34f75ad1d3f8f2331647b
+payload:
+  record_update:
+    $:
+      sys_domain: global
+      table: sys_app_module
+    sys_app_module:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      application:
+        $:
+          display_value: PagerDuty
+        _: eeda99a64f834e00dd657bb28110c748
+      assessment: ""
+      device_type: ""
+      filter: ""
+      hint: ""
+      homepage: ""
+      image: ""
+      link_type: LIST
+      map_page: ""
+      mobile_title: PagerDuty Renotify Runs
+      mobile_view_name: Mobile
+      name: x_pd_integration_renotify_run
+      order: "3040"
+      override_menu_roles: "false"
+      query: ""
+      report: ""
+      require_confirmation: "true"
+      roles: x_pd_integration.admin
+      sys_class_name: sys_app_module
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_domain: global
+      sys_domain_path: /
+      sys_id: 783d8340a0f34f75ad1d3f8f2331647b
+      sys_mod_count: "0"
+      sys_name: PagerDuty Renotify Runs
+      sys_overrides: ""
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_app_module_783d8340a0f34f75ad1d3f8f2331647b
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      timeline_page: ""
+      title: PagerDuty Renotify Runs
+      uncancelable: "false"
+      view_name: ""
+      window_name: ""
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: PagerDuty Renotify Runs
+type: Module
+update_domain: global
+update_guid: 3e9324c5c0c04b3797b2438ad36a7fd4
+update_guid_history: 3e9324c5c0c04b3797b2438ad36a7fd4:-700772660
+update_set:
+  $:
+    display_value: ""
+view: ""

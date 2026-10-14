@@ -1,0 +1,42 @@
+$:
+  action: INSERT_OR_UPDATE
+application:
+  _: 39a9d9664f834e00dd657bb28110c77b
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+application_name: PagerDuty Incident Resolution Platform
+application_scope: x_pd_integration
+application_version: 1.0.0
+collisions: ""
+commit_date: ""
+deleted: ""
+description: ATF tests for the Renotify Escalation Policy overlay (optional;
+  install the overlay first)
+inserted: ""
+name: PagerDuty Renotify Tests v1.0.0
+origin_sys_id: ""
+parent:
+  $:
+    display_value: ""
+release_date: ""
+remote_base_update_set:
+  $:
+    display_value: ""
+remote_parent_id: ""
+remote_sys_id: 611d9a468693291e724e1ce9e2ce7c5c
+state: loaded
+summary: ""
+sys_class_name: sys_remote_update_set
+sys_created_by: pd-ep-renotify
+sys_created_on: 2022-05-06 16:46:32
+sys_id: ee109796384223e85ff7111e64cf94a8
+sys_mod_count: "0"
+sys_updated_by: pd-ep-renotify
+sys_updated_on: 2022-05-06 16:46:32
+update_set:
+  $:
+    display_value: ""
+update_source:
+  $:
+    display_value: ""
+updated: ""

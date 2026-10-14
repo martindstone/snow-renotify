@@ -1,0 +1,58 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_ui_page_5e4bc0239b214c3dacc361cc5563e0fc
+payload:
+  record_update:
+    $:
+      table: sys_ui_page
+    sys_ui_page:
+      $:
+        action: INSERT_OR_UPDATE
+      category: general
+      client_script:
+        $ref: renotify_dialog.js
+      description: Renotify an escalation policy already added to an incident
+      direct: "false"
+      endpoint: x_pd_integration_renotify_dialog.do
+      html:
+        $ref: renotify_dialog.html
+      name: renotify_dialog
+      processing_script: ""
+      sys_class_name: sys_ui_page
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: 5e4bc0239b214c3dacc361cc5563e0fc
+      sys_mod_count: "0"
+      sys_name: renotify_dialog
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_ui_page_5e4bc0239b214c3dacc361cc5563e0fc
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: renotify_dialog
+type: UI Page
+update_domain: global
+update_guid: b0afff4bdeb142b4a80a45b4e8738b5c
+update_guid_history: b0afff4bdeb142b4a80a45b4e8738b5c:-718781320
+update_set:
+  $:
+    display_value: ""
+view: ""

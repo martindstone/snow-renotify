@@ -1,0 +1,56 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_suite_test_5f757c06fe444da306f37af3dd304da6
+payload:
+  record_update:
+    $:
+      table: sys_atf_test_suite_test
+    sys_atf_test_suite_test:
+      $:
+        action: INSERT_OR_UPDATE
+      abort_on_failure: "false"
+      order: "700"
+      test:
+        $:
+          display_value: "PD: Renotify run - people PagerDuty already asked"
+        _: 0643812e00e135cdb00a609d51503677
+      test_suite:
+        $:
+          display_value: "PD: Renotify"
+        _: aaa26ac99d9f78945ac8827a7cfb2881
+      sys_class_name: sys_atf_test_suite_test
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: 5f757c06fe444da306f37af3dd304da6
+      sys_mod_count: "0"
+      sys_name: aaa26ac99d9f78945ac8827a7cfb2881
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_suite_test_5f757c06fe444da306f37af3dd304da6
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: aaa26ac99d9f78945ac8827a7cfb2881
+type: Test Suite Test
+update_domain: global
+update_guid: 1ffa99c922e9928bf0e7761f6705134e
+update_guid_history: 1ffa99c922e9928bf0e7761f6705134e:0
+update_set:
+  $:
+    display_value: ""
+view: ""

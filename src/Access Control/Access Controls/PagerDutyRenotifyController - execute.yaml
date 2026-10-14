@@ -1,0 +1,63 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_security_acl_b178035508774c76bbec655018c61fdd
+payload:
+  record_update:
+    $:
+      table: sys_security_acl
+    sys_security_acl:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      admin_overrides: "true"
+      advanced: "false"
+      condition: ""
+      description: ""
+      name: PagerDutyRenotifyController
+      operation:
+        $:
+          display_value: execute
+        _: execute
+      script: ""
+      sys_class_name: sys_security_acl
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: b178035508774c76bbec655018c61fdd
+      sys_mod_count: "0"
+      sys_name: PagerDutyRenotifyController
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sys_security_acl_b178035508774c76bbec655018c61fdd
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      type:
+        $:
+          display_value: client_callable_script_include
+        _: client_callable_script_include
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: PagerDutyRenotifyController
+type: Access Control
+update_domain: global
+update_guid: cab40fdc3f02411b9b8c190fdcb72b69
+update_guid_history: cab40fdc3f02411b9b8c190fdcb72b69:-1163355460
+update_set:
+  $:
+    display_value: ""
+view: ""

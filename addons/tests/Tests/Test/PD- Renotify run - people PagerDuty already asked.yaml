@@ -1,0 +1,84 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_0643812e00e135cdb00a609d51503677
+payload:
+  record_update:
+    $:
+      table: sys_atf_test
+    sys_atf_test:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      copied_from: ""
+      description: "Not asking again someone PagerDuty has just asked, while still
+        waiting for their answer.\r
+
+        \r
+
+        Checks that:\r
+
+        - does not ask again someone PagerDuty asked itself just as the
+        level became due, but still waits for their answer\r
+
+        - asks someone whose pending request is older than the moment
+        the level became due\r
+
+        - asks again someone PagerDuty asked before the click: that is
+        what Renotify is for\r
+
+        - skips only the people already asked in a level with several\r
+
+        - asks someone who has already answered\r
+
+        - uses the moment the delay expired, not when the timer noticed,
+        when a level times out\r
+
+        - asks everyone when PagerDuty cannot be read\r
+
+        - never skips the one-off renotify of a person"
+      enable_parameterized_testing: "false"
+      fail_on_server_error: "true"
+      name: "PD: Renotify run - people PagerDuty already asked"
+      parameters: ""
+      remember: ""
+      sn_atf_tg_generated: "false"
+      sys_class_name: sys_atf_test
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: 0643812e00e135cdb00a609d51503677
+      sys_mod_count: "0"
+      sys_name: "PD: Renotify run - people PagerDuty already asked"
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_0643812e00e135cdb00a609d51503677
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+    sys_variable_value:
+      $:
+        action: delete_multiple
+        query: document_key=0643812e00e135cdb00a609d51503677
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: "PD: Renotify run - people PagerDuty already asked"
+type: Test
+update_domain: global
+update_guid: 0a12ef21b776e784d8d00692ec86e68c
+update_guid_history: 0a12ef21b776e784d8d00692ec86e68c:0
+update_set:
+  $:
+    display_value: ""
+view: ""

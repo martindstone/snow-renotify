@@ -1,0 +1,76 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_302cfe31be684e8952274cde0f5491e1
+payload:
+  record_update:
+    $:
+      table: sys_atf_test
+    sys_atf_test:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      copied_from: ""
+      description: "The run table and its columns, the Script Includes, the Business
+        Rule, the event, Script Action and tick, the button and the dialog.\r
+
+        \r
+
+        Checks that:\r
+
+        - the run table has every column the executor writes\r
+
+        - the Script Includes can be created\r
+
+        - webhook replies reach the run: the Business Rule is active on
+        the webhook import table\r
+
+        - follow-up work runs: the event, its Script Action and the
+        one-minute tick are registered and active\r
+
+        - the button and the dialog exist"
+      enable_parameterized_testing: "false"
+      fail_on_server_error: "true"
+      name: "PD: Renotify install - the overlay's records are in place"
+      parameters: ""
+      remember: ""
+      sn_atf_tg_generated: "false"
+      sys_class_name: sys_atf_test
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: 302cfe31be684e8952274cde0f5491e1
+      sys_mod_count: "0"
+      sys_name: "PD: Renotify install - the overlay's records are in place"
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_302cfe31be684e8952274cde0f5491e1
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+    sys_variable_value:
+      $:
+        action: delete_multiple
+        query: document_key=302cfe31be684e8952274cde0f5491e1
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: "PD: Renotify install - the overlay's records are in place"
+type: Test
+update_domain: global
+update_guid: 9a2db4d7b9907d6dfd0f46c1fd592ff4
+update_guid_history: 9a2db4d7b9907d6dfd0f46c1fd592ff4:0
+update_set:
+  $:
+    display_value: ""
+view: ""

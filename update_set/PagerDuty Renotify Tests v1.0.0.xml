@@ -1,0 +1,1758 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<unload>
+  <sys_remote_update_set action="INSERT_OR_UPDATE">
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <application_name>PagerDuty Incident Resolution Platform</application_name>
+    <application_scope>x_pd_integration</application_scope>
+    <application_version>1.0.0</application_version>
+    <collisions/>
+    <commit_date/>
+    <deleted/>
+    <description>ATF tests for the Renotify Escalation Policy overlay (optional; install the overlay first)</description>
+    <inserted/>
+    <name>PagerDuty Renotify Tests v1.0.0</name>
+    <origin_sys_id/>
+    <parent display_value=""/>
+    <release_date/>
+    <remote_base_update_set display_value=""/>
+    <remote_parent_id/>
+    <remote_sys_id>611d9a468693291e724e1ce9e2ce7c5c</remote_sys_id>
+    <state>loaded</state>
+    <summary/>
+    <sys_class_name>sys_remote_update_set</sys_class_name>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_id>ee109796384223e85ff7111e64cf94a8</sys_id>
+    <sys_mod_count>0</sys_mod_count>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <update_set display_value=""/>
+    <update_source display_value=""/>
+    <updated/>
+  </sys_remote_update_set>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_script_include_7666e0505885c513f6743c8b99c07bd6</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_script_include"><sys_script_include action="INSERT_OR_UPDATE"><access>package_private</access><active>true</active><api_name>x_pd_integration.PagerDutyRenotifyTestKit</api_name><caller_access/><client_callable>false</client_callable><description>Helpers for the PD: Renotify ATF tests (optional tests package of the Renotify overlay)</description><mobile_callable>false</mobile_callable><name>PagerDutyRenotifyTestKit</name><sandbox_callable>false</sandbox_callable><script>/*** Changes made to this script are not supported by PagerDuty ***/
+/**
+ * Helpers for the "PD: Renotify ..." ATF tests (the optional tests package of the Renotify overlay).
+ *
+ * world() builds a PagerDutyRenotify wired to a fake PagerDuty and a fake clock, so a test can drive a whole run - replies,
+ * timeouts, loops - in a few lines without PagerDuty, the network or waiting. Runs are real rows of
+ * x_pd_integration_renotify_run, so the table, the columns and the JSON the run is saved as are tested too. Everything a world
+ * created is removed by cleanup().
+ *
+ * machine() plays the executor over the pure state machine only (PagerDutyRenotifyMachine), without any record.
+ */
+var PagerDutyRenotifyTestKit = Class.create();
+PagerDutyRenotifyTestKit.prototype = {
+  type: 'PagerDutyRenotifyTestKit',
+
+  MINUTE: 60000,
+  TABLE: 'x_pd_integration_renotify_run',
+
+  initialize: function () {},
+
+  /** An on-call entry like PagerDuty's GET /oncalls returns it. */
+  oncall: function (level, userId) {
+    return { escalation_level: level, user: { id: userId } };
+  },
+
+  /** An incident.responder.replied v3 webhook payload. */
+  replyEvent: function (pdIncidentId, userId, state, occurredAtMs) {
+    return {
+      event_type: 'incident.responder.replied',
+      occurred_at: new Date(occurredAtMs).toISOString(),
+      data: { type: 'incident_responder', incident: { id: pdIncidentId }, user: { id: userId }, state: state }
+    };
+  },
+
+  /** An incident.resolved v3 webhook payload. */
+  resolvedEvent: function (pdIncidentId) {
+    return { event_type: 'incident.resolved', data: { id: pdIncidentId } };
+  },
+
+  /**
+   * Plays the executor over the pure state machine: resolves each level when it is reached, records the responder
+   * requests, and keeps its own clock in minutes.
+   * @param {Object} policy PagerDuty escalation policy ({ num_loops, escalation_rules: [{ escalation_delay_in_minutes }] })
+   * @param {Function} oncallsFor function (level) returning the on-calls at that moment
+   */
+  machine: function (policy, oncallsFor) {
+    var machine = new x_pd_integration.PagerDutyRenotifyMachine();
+    var built = machine.buildRules(policy);
+    var minute = this.MINUTE;
+    var requests = [];
+    var now = 0;
+    var run;
+    var api = {};
+    var execute = function (actions) {
+      actions.forEach(function (action) {
+        if (action.type === 'requestResponders') {
+          requests.push({ atMin: now / minute, userIds: action.userIds });
+        } else if (action.type === 'resolveLevel') {
+          execute(machine.onLevelResolved(run, machine.usersForLevel(oncallsFor(action.level), action.level), now).actions);
+        }
+      });
+    };
+    api.requests = requests;
+    api.run = function () { return run; };
+    api.start = function () {
+      var started = machine.start({ incidentId: 'I', policyId: 'P', requesterId: 'R', rules: built.rules, numLoops: built.numLoops }, now);
+      run = started.run;
+      execute(started.actions);
+      return api;
+    };
+    api.at = function (minutes) { now = minutes * minute; return api; };
+    api.reply = function (userId, status, repliedAtMin) {
+      execute(machine.onReply(run, userId, status, now, repliedAtMin === undefined ? undefined : repliedAtMin * minute).actions);
+      return api;
+    };
+    api.tick = function () { execute(machine.onTick(run, now).actions); return api; };
+    api.alreadyAsked = function (askedAtMinByUser) {
+      var asked = {};
+      Object.keys(askedAtMinByUser).forEach(function (id) { asked[id] = askedAtMinByUser[id] * minute; });
+      machine.onAlreadyAsked(run, asked);
+      return api;
+    };
+    api.resolveIncident = function () { machine.onIncidentStatus(run, 'resolved'); return api; };
+    api.users = function () { return requests.map(function (r) { return r.userIds; }); };
+    return api;
+  },
+
+  /**
+   * A PagerDutyRenotify on a fake PagerDuty with a fake clock.
+   * @param {Object} [options] policyDelays (minutes per level, default [15, 15, 15]), numLoops, oncalls (default A, B, C on
+   *   levels 1-3), requester (the PagerDuty user clicking Renotify), defaultUser (the user asked on behalf of that person)
+   */
+  world: function (options) {
+    var kit = this;
+    var opts = options || {};
+    var id = 'ATF' + new Date().getTime() + Math.floor(Math.random() * 100000);
+    var delays = opts.policyDelays || [15, 15, 15];
+    var createdRuns = [];
+
+    var pd = {
+      incidentId: id + 'I',
+      policy: {
+        id: id + 'P',
+        name: 'ATF policy',
+        num_loops: opts.numLoops || 0,
+        escalation_rules: delays.map(function (d) { return { escalation_delay_in_minutes: d }; })
+      },
+      oncalls: opts.oncalls || [kit.oncall(1, 'A'), kit.oncall(2, 'B'), kit.oncall(3, 'C')],
+      incidentResponders: [], // as GET /incidents/{id} reports them: { user: { id }, state, requested_at }
+      requests: [],           // what was asked of PagerDuty: { users, requester, from }
+      postFails: false,
+      oncallsStatus: 0,       // set to an HTTP status to make the on-calls request fail with it
+      incidentFails: false
+    };
+
+    var response = function (status, body) {
+      return { getStatusCode: function () { return status; }, haveError: function () { return status &gt;= 400; }, getErrorMessage: function () { return 'HTTP ' + status; }, getBody: function () { return JSON.stringify(body); } };
+    };
+    var FakeRest = function () {};
+    FakeRest.prototype = {
+      hasError: function () { return false; },
+      getError: function () { return ''; },
+      getREST: function (feature) {
+        // Like the platform's REST client, a raw '[' or ']' is "Invalid query"
+        if (/[\[\]]/.test(feature)) { return response(400, { error: 'Invalid query' }); }
+        var route = feature.split('?')[0];
+        if (route === 'escalation_policies/' + pd.policy.id) { return response(200, { escalation_policy: pd.policy }); }
+        if (route === 'incidents/' + pd.incidentId) {
+          if (pd.incidentFails) { return response(500, { error: 'boom' }); }
+          return response(200, { incident: { id: pd.incidentId, incidents_responders: pd.incidentResponders } });
+        }
+        if (route === 'oncalls') {
+          if (pd.oncallsStatus) { return response(pd.oncallsStatus, { error: 'refused' }); }
+          return feature.indexOf('escalation_policy_ids%5B%5D=' + pd.policy.id) &gt;= 0
+            ? response(200, { oncalls: pd.oncalls, more: false })
+            : response(200, { oncalls: [], more: false });
+        }
+        return response(404, {});
+      },
+      postREST: function (feature, body, from) {
+        if (pd.postFails) { return response(500, { error: 'boom' }); }
+        pd.requests.push({
+          users: body.responder_request_targets.map(function (t) { return t.responder_request_target.id; }),
+          requester: body.requester_id,
+          from: from
+        });
+        return response(200, {});
+      }
+    };
+
+    var requester = opts.requester || 'REQ';
+    var queued = [];
+    var clock = new Date().getTime();
+    var svc = new x_pd_integration.PagerDutyRenotify({
+      rest: function () { return new FakeRest(); },
+      pd: function () {
+        return {
+          getUserIDFromFieldData: function (snUserId) { return snUserId === 'atf-user' ? requester : null; },
+          getUserEmailByPDID: function (pdUserId) { return pdUserId.toLowerCase() + '@example.com'; }
+        };
+      },
+      defaultUser: opts.defaultUser !== undefined ? opts.defaultUser : 'DEFAULT',
+      incident: function (snIncidentSysId) { return snIncidentSysId === 'atf-incident' ? pd.incidentId : null; },
+      queue: function (runRecord) { queued.push(runRecord.getUniqueValue()); }
+    });
+    svc._now = function () { return clock; };
+
+    var world = { pd: pd, svc: svc, SN_INCIDENT: 'atf-incident', SN_USER: 'atf-user', requester: requester };
+    world.now = function () { return clock; };
+    world.advance = function (minutes) { clock += minutes * kit.MINUTE; return world; };
+    world.start = function () {
+      var started = svc.start(world.SN_INCIDENT, pd.policy.id, world.SN_USER);
+      createdRuns.push(started.runId);
+      return started;
+    };
+    world.reply = function (userId, state, offsetMs) {
+      svc.handleReplyEvent(kit.replyEvent(pd.incidentId, userId, state, clock + (offsetMs === undefined ? 1000 : offsetMs)));
+      return world;
+    };
+    world.resolve = function () { svc.handleResolvedEvent(kit.resolvedEvent(pd.incidentId)); return world; };
+    world.tick = function () { svc.tick(pd.incidentId); return world; };
+    /** Runs the work the executor queued as events (what the Script Action does). */
+    world.flushQueued = function () {
+      while (queued.length) { svc.flush(queued.shift()); }
+      return world;
+    };
+    world.queuedCount = function () { return queued.length; };
+    world.run = function (runId) {
+      var gr = new GlideRecord(kit.TABLE);
+      if (runId) {
+        gr.get(runId);
+      } else {
+        gr.addQuery('pd_incident_id', pd.incidentId);
+        gr.orderByDesc('sys_created_on');
+        gr.setLimit(1);
+        gr.query();
+        gr.next();
+      }
+      return gr;
+    };
+    world.requestedUsers = function () { return pd.requests.map(function (r) { return r.users.slice().sort(); }); };
+    world.cleanup = function () {
+      var gr = new GlideRecord(kit.TABLE);
+      gr.addQuery('pd_incident_id', pd.incidentId);
+      gr.query();
+      while (gr.next()) { gr.deleteRecord(); }
+    };
+    return world;
+  }
+};
+</script><sys_class_name>sys_script_include</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>7666e0505885c513f6743c8b99c07bd6</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PagerDutyRenotifyTestKit</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_script_include_7666e0505885c513f6743c8b99c07bd6</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_script_include></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PagerDutyRenotifyTestKit</target_name>
+    <type>Script Include</type>
+    <update_domain>global</update_domain>
+    <update_guid>ef00b8ecd4098081df0dbe4ff46b1c67</update_guid>
+    <update_guid_history>ef00b8ecd4098081df0dbe4ff46b1c67:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>00d071fd5261c6062690dfb148a343ba</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_302cfe31be684e8952274cde0f5491e1</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>The run table and its columns, the Script Includes, the Business Rule, the event, Script Action and tick, the button and the dialog.&#xD;
+&#xD;
+Checks that:&#xD;
+- the run table has every column the executor writes&#xD;
+- the Script Includes can be created&#xD;
+- webhook replies reach the run: the Business Rule is active on the webhook import table&#xD;
+- follow-up work runs: the event, its Script Action and the one-minute tick are registered and active&#xD;
+- the button and the dialog exist</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify install - the overlay's records are in place</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>302cfe31be684e8952274cde0f5491e1</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify install - the overlay's records are in place</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_302cfe31be684e8952274cde0f5491e1</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=302cfe31be684e8952274cde0f5491e1"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify install - the overlay's records are in place</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>9a2db4d7b9907d6dfd0f46c1fd592ff4</update_guid>
+    <update_guid_history>9a2db4d7b9907d6dfd0f46c1fd592ff4:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>54e8849c947914e964ba4f9fa13f24f2</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_a99823efdc2c7de58feaa73fe3f11af5</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>The decision logic only (no records): which level is asked when, and what a join, a decline or a stale reply does.&#xD;
+&#xD;
+Checks that:&#xD;
+- starts at level 1 and requests only that level&#xD;
+- a join stops the run and requests nothing else, however long it waits&#xD;
+- a decline requests the next level immediately&#xD;
+- a cancelled request counts as a decline&#xD;
+- a level with two people waits until both decline, and stops when either joins&#xD;
+- ignores a reply from someone who is not on the current level&#xD;
+- ignores a reply that predates the request it would answer&#xD;
+- starts over whatever happened before: asks A, then B, then C even though A had declined earlier</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify machine - levels, joins and declines</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>a99823efdc2c7de58feaa73fe3f11af5</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify machine - levels, joins and declines</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_a99823efdc2c7de58feaa73fe3f11af5</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=a99823efdc2c7de58feaa73fe3f11af5"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify machine - levels, joins and declines</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>d6bc575ac8ac2703cb7eca0095742962</update_guid>
+    <update_guid_history>d6bc575ac8ac2703cb7eca0095742962:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>d2a1e699119bde63c86cafb3d95c769b</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_70c27b777aaa91ec0fa80a1ded41bd98</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>The decision logic only: answers from people PagerDuty asked itself count from PagerDuty's own request time.&#xD;
+&#xD;
+Checks that:&#xD;
+- counts their answer from the moment PagerDuty asked them, not from when the level was requested&#xD;
+- still ignores an answer from before PagerDuty asked them&#xD;
+- only knows people of the current level, and leaves the rest on the level's own request time&#xD;
+- forgets who was asked when the next level starts</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify machine - people PagerDuty already asked</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>70c27b777aaa91ec0fa80a1ded41bd98</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify machine - people PagerDuty already asked</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_70c27b777aaa91ec0fa80a1ded41bd98</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=70c27b777aaa91ec0fa80a1ded41bd98"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify machine - people PagerDuty already asked</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>5cd2a87f1fe8b9c5db23b9a38d8ed871</update_guid>
+    <update_guid_history>5cd2a87f1fe8b9c5db23b9a38d8ed871:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>86c62d737c91166419622b8f415eb98c</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_b85f7b5dde019a7dbea5676b1d0f7837</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>The decision logic only: level delays, the policy's loops, exhaustion, shift changes, and when a level counts as due.&#xD;
+&#xD;
+Checks that:&#xD;
+- moves on only after the level delay&#xD;
+- repeats the levels for the policy's loops and then is exhausted: 3 levels x (1 + 3 loops) = 12 requests&#xD;
+- a policy with no rules is exhausted at once&#xD;
+- resolves the people on call when each level is reached, so a shift change counts&#xD;
+- skips a level with nobody on call&#xD;
+- stops when the incident is resolved&#xD;
+- counts a level as due when its delay expired, not when the timer noticed&#xD;
+- counts a level as due when PagerDuty stamped the decline, unless that is missing or in the future</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify machine - timeouts, loops and the end</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>b85f7b5dde019a7dbea5676b1d0f7837</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify machine - timeouts, loops and the end</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_b85f7b5dde019a7dbea5676b1d0f7837</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=b85f7b5dde019a7dbea5676b1d0f7837"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify machine - timeouts, loops and the end</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>50891f9dfc81c01e6aef3f0eab3159e7</update_guid>
+    <update_guid_history>50891f9dfc81c01e6aef3f0eab3159e7:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>5963d70896ea9613f32fe0e7fc7e5d32</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_b07336c17f154b33bfac6446d5fb66b1</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>PagerDuty failures, Stop, and renotifying one person.&#xD;
+&#xD;
+Checks that:&#xD;
+- a PagerDuty failure on start is reported and the run is marked failed&#xD;
+- when PagerDuty refuses the on-calls request, the failure points at the oncalls.read OAuth scope&#xD;
+- other on-calls failures do not mention the scope&#xD;
+- a failure on a later level marks the run failed and stops it&#xD;
+- cancel stops an active run and nothing more is requested&#xD;
+- cancel of a run that has already ended changes nothing&#xD;
+- renotifying one person requests just them, as the user who clicked, and starts no run&#xD;
+- renotifying yourself is requested on behalf of another user, because PagerDuty ignores a request you make of yourself&#xD;
+- renotifying one person needs a person, and checks what start checks&#xD;
+- renotifying one person reports a PagerDuty failure</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify run - failures, stopping and single people</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>b07336c17f154b33bfac6446d5fb66b1</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify run - failures, stopping and single people</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_b07336c17f154b33bfac6446d5fb66b1</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=b07336c17f154b33bfac6446d5fb66b1"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify run - failures, stopping and single people</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>81dde49dca0f8db067507bb2b618d3c4</update_guid>
+    <update_guid_history>81dde49dca0f8db067507bb2b618d3c4:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>cea09f61c201183f5d26c96c476ee593</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_0643812e00e135cdb00a609d51503677</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>Not asking again someone PagerDuty has just asked, while still waiting for their answer.&#xD;
+&#xD;
+Checks that:&#xD;
+- does not ask again someone PagerDuty asked itself just as the level became due, but still waits for their answer&#xD;
+- asks someone whose pending request is older than the moment the level became due&#xD;
+- asks again someone PagerDuty asked before the click: that is what Renotify is for&#xD;
+- skips only the people already asked in a level with several&#xD;
+- asks someone who has already answered&#xD;
+- uses the moment the delay expired, not when the timer noticed, when a level times out&#xD;
+- asks everyone when PagerDuty cannot be read&#xD;
+- never skips the one-off renotify of a person</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify run - people PagerDuty already asked</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>0643812e00e135cdb00a609d51503677</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify run - people PagerDuty already asked</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_0643812e00e135cdb00a609d51503677</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=0643812e00e135cdb00a609d51503677"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify run - people PagerDuty already asked</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>0a12ef21b776e784d8d00692ec86e68c</update_guid>
+    <update_guid_history>0a12ef21b776e784d8d00692ec86e68c:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>7a48e3422d8160ed33028b6d9322d199</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_4d386c8db5d8b0e3805312a9d3202f13</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>A run in the real table: declines, duplicate deliveries, joins, the level delay, loops, exhaustion, resolution and recovery.&#xD;
+&#xD;
+Checks that:&#xD;
+- a decline queues the follow-up, and running it requests level 2 once&#xD;
+- a duplicate delivery of the same webhook does not request level 2 twice&#xD;
+- two people on a level replying before the follow-up runs still advance exactly once&#xD;
+- a join stops the run and nothing more is ever requested&#xD;
+- ignores a reply that predates the request it would answer&#xD;
+- moves to the next level only after the level's delay has passed&#xD;
+- resolves the people on call when the level is reached (a shift change)&#xD;
+- a run that times out on its last level is saved as exhausted and stops being active&#xD;
+- repeats the policy for its loops before it is exhausted&#xD;
+- a tick that changes nothing does not rewrite the run&#xD;
+- the incident being resolved ends the run&#xD;
+- a tick recovers a run left waiting after a follow-up that claimed its work and died</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify run - replies, timeouts and the end</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>4d386c8db5d8b0e3805312a9d3202f13</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify run - replies, timeouts and the end</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_4d386c8db5d8b0e3805312a9d3202f13</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=4d386c8db5d8b0e3805312a9d3202f13"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify run - replies, timeouts and the end</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>310cd568f8d5aec9ea6efd103c09248f</update_guid>
+    <update_guid_history>310cd568f8d5aec9ea6efd103c09248f:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>2a11d81124f0dcb4ceca398ffa04ecc3</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_37a1616a0b8179486003b81acf878ba9</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>Starting a run: level 1 only, the saved run, the checks before anything is sent, and the person clicking asked on behalf of another user.&#xD;
+&#xD;
+Checks that:&#xD;
+- requests only level 1, as the user who clicked, and records an active run&#xD;
+- keeps everything it needs to continue in the run&#xD;
+- asks PagerDuty for on-calls with a query the platform accepts, and only for this policy&#xD;
+- refuses a second run for the same incident and policy while one is active&#xD;
+- rejects a user with no PagerDuty mapping before anything is sent&#xD;
+- rejects an incident that does not exist, or is not linked to PagerDuty&#xD;
+- puts the person clicking on level 1 into a separate request made on behalf of another user&#xD;
+- with no other user to ask on behalf of, still sends the request and carries on</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify run - start</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>37a1616a0b8179486003b81acf878ba9</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify run - start</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_37a1616a0b8179486003b81acf878ba9</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=37a1616a0b8179486003b81acf878ba9"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify run - start</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>d13c12fd651ba2c1f41500aa3b8b4245</update_guid>
+    <update_guid_history>d13c12fd651ba2c1f41500aa3b8b4245:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>7626e90f279a6550ab72ed3f6c216b97</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_844c564e5dedbc71dc870e8b2d225927</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test"><sys_atf_test action="INSERT_OR_UPDATE"><active>true</active><copied_from/><description>Inserts webhook rows like the inbound handling does and checks the run follows: join and resolution end it, anything else leaves it alone.&#xD;
+&#xD;
+Checks that:&#xD;
+- a responder joining ends the run&#xD;
+- the incident being resolved ends the run&#xD;
+- a reply about another incident leaves the run alone&#xD;
+- a reply from someone who is not on the current level leaves the run alone&#xD;
+- other events leave the run alone&#xD;
+- a payload that cannot be read does not stop the row from being saved, and leaves the run alone</description><enable_parameterized_testing>false</enable_parameterized_testing><fail_on_server_error>true</fail_on_server_error><name>PD: Renotify webhook - the Business Rule feeds the run</name><parameters/><remember/><sn_atf_tg_generated>false</sn_atf_tg_generated><sys_class_name>sys_atf_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>844c564e5dedbc71dc870e8b2d225927</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify webhook - the Business Rule feeds the run</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_844c564e5dedbc71dc870e8b2d225927</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test><sys_variable_value action="delete_multiple" query="document_key=844c564e5dedbc71dc870e8b2d225927"/></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify webhook - the Business Rule feeds the run</target_name>
+    <type>Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>d663f7eaa356cb3770bc63e55ccfd0c2</update_guid>
+    <update_guid_history>d663f7eaa356cb3770bc63e55ccfd0c2:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>345bcd02752c3a8a88242d77f0ba1f02</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_07e017dd96e428d0c27af1ddb2fefdd9</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify install - the overlay's records are in place">302cfe31be684e8952274cde0f5491e1</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>07e017dd96e428d0c27af1ddb2fefdd9</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_07e017dd96e428d0c27af1ddb2fefdd9</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=07e017dd96e428d0c27af1ddb2fefdd9"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>07e017dd96e428d0c27af1ddb2fefdd9</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>5be7f890939ca5ace02e5f0133eaceca</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var exists = function (table, query) {
+      var gr = new GlideRecord(table);
+      gr.addEncodedQuery(query);
+      gr.setLimit(1);
+      gr.query();
+      return gr.next() ? gr : null;
+    };
+
+    describe('Renotify install: the overlay\'s records are in place', function () {
+      it('the run table has every column the executor writes', function () {
+        var run = new GlideRecord('x_pd_integration_renotify_run');
+        expect(run.isValid()).toBe(true);
+        ['incident', 'pd_incident_id', 'pd_policy_id', 'policy_name', 'requester_pd_id', 'run_json', 'pending_actions', 'state', 'active', 'level', 'loop', 'last_error'].forEach(function (column) {
+          expect(run.isValidField(column)).toBe(true);
+        });
+      });
+
+      it('the Script Includes can be created', function () {
+        expect(typeof new x_pd_integration.PagerDutyRenotifyMachine().start).toBe('function');
+        expect(typeof new x_pd_integration.PagerDutyRenotify().start).toBe('function');
+      });
+
+      it('webhook replies reach the run: the Business Rule is active on the webhook import table', function () {
+        var rule = exists('sys_script', 'name=PD Renotify Escalation Policy on Webhook^collection=x_pd_integration_webhook_import');
+        expect(rule).not.toBe(null);
+        expect(rule.getValue('active')).toBe('1');
+        expect(rule.getValue('when')).toBe('after');
+      });
+
+      it('follow-up work runs: the event, its Script Action and the one-minute tick are registered and active', function () {
+        expect(exists('sysevent_register', 'event_name=x_pd_integration.renotify_run')).not.toBe(null);
+        var action = exists('sysevent_script_action', 'name=PagerDuty Renotify Run^event_name=x_pd_integration.renotify_run');
+        expect(action).not.toBe(null);
+        expect(action.getValue('active')).toBe('1');
+        var job = exists('sysauto_script', 'name=PagerDuty Renotify Tick');
+        expect(job).not.toBe(null);
+        expect(job.getValue('active')).toBe('1');
+        // like the integration's own PagerDuty refresh jobs, it is not tied to a named user (the OOTB admin may be renamed or deactivated)
+        expect(job.getValue('run_as')).toBeFalsy();
+        expect(job.getValue('run_type')).toBe('periodically');
+      });
+
+      it('the button and the dialog exist', function () {
+        var button = exists('sys_ui_action', 'name=Renotify^table=incident');
+        expect(button).not.toBe(null);
+        expect(button.getValue('active')).toBe('1');
+        expect(exists('sys_ui_page', 'name=renotify_dialog')).not.toBe(null);
+        expect(exists('sys_script_include', 'name=PagerDutyRenotifyController')).not.toBe(null);
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>07e017dd96e428d0c27af1ddb2fefdd9</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>e3fce7fcf641ea4827ce7cd30c4db146</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>56b7db59eccc6b51064870783ec556c3</update_guid>
+    <update_guid_history>56b7db59eccc6b51064870783ec556c3:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>76b250555a83b6e8257ce2bec12d8898</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_1fa702218d5211a8b3ac5db87323fa27</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify run - failures, stopping and single people">b07336c17f154b33bfac6446d5fb66b1</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>1fa702218d5211a8b3ac5db87323fa27</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_1fa702218d5211a8b3ac5db87323fa27</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=1fa702218d5211a8b3ac5db87323fa27"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>1fa702218d5211a8b3ac5db87323fa27</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>f56f7ddc6f54bc07ab4ebe3f0ed2dfe1</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var kit = new x_pd_integration.PagerDutyRenotifyTestKit();
+    var world;
+    var thrown = function (fn) {
+      try { fn(); } catch (e) { return String(e.message || e); }
+      return '';
+    };
+
+    describe('Renotify run: failures, stopping and single people', function () {
+      beforeEach(function () { world = kit.world(); });
+      afterEach(function () { world.cleanup(); });
+
+      it('a PagerDuty failure on start is reported and the run is marked failed', function () {
+        world.pd.postFails = true;
+        expect(thrown(function () { world.start(); })).not.toBe('');
+        var run = world.run();
+        expect(run.getValue('state')).toBe('failed');
+        expect(run.getValue('active')).toBe('0');
+        expect(run.getValue('last_error')).toBeTruthy();
+      });
+
+      it('when PagerDuty refuses the on-calls request, the failure points at the oncalls.read OAuth scope', function () {
+        world.pd.oncallsStatus = 403;
+        expect(thrown(function () { world.start(); })).toContain('oncalls.read');
+        expect(world.run().getValue('state')).toBe('failed');
+        expect(world.run().getValue('last_error')).toContain('oncalls.read');
+        expect(world.pd.requests.length).toBe(0);
+      });
+
+      it('other on-calls failures do not mention the scope', function () {
+        world.pd.oncallsStatus = 500;
+        var message = thrown(function () { world.start(); });
+        expect(message).toContain('Could not fetch on-calls');
+        expect(message).not.toContain('oncalls.read');
+      });
+
+      it('a failure on a later level marks the run failed and stops it', function () {
+        world.start();
+        world.pd.postFails = true;
+        world.reply('A', 'declined');
+        world.flushQueued();
+        expect(world.run().getValue('state')).toBe('failed');
+        world.pd.postFails = false;
+        world.advance(60).tick();
+        expect(world.pd.requests.length).toBe(1);
+      });
+
+      it('cancel stops an active run and nothing more is requested', function () {
+        world.start();
+        var id = world.run().getUniqueValue();
+        world.svc.cancel(id);
+        expect(world.run().getValue('state')).toBe('cancelled');
+        expect(world.run().getValue('active')).toBe('0');
+        world.advance(60).tick();
+        expect(world.pd.requests.length).toBe(1);
+      });
+
+      it('cancel of a run that has already ended changes nothing', function () {
+        world.start();
+        world.reply('A', 'joined');
+        world.svc.cancel(world.run().getUniqueValue());
+        expect(world.run().getValue('state')).toBe('joined');
+      });
+
+      it('renotifying one person requests just them, as the user who clicked, and starts no run', function () {
+        world.svc.renotifyUser(world.SN_INCIDENT, 'U9', world.SN_USER);
+        expect(world.pd.requests).toEqual([{ users: ['U9'], requester: 'REQ', from: 'req@example.com' }]);
+        expect(world.run().isValidRecord()).toBe(false);
+      });
+
+      it('renotifying yourself is requested on behalf of another user, because PagerDuty ignores a request you make of yourself', function () {
+        world.svc.renotifyUser(world.SN_INCIDENT, 'REQ', world.SN_USER);
+        expect(world.pd.requests).toEqual([{ users: ['REQ'], requester: 'DEFAULT', from: 'default@example.com' }]);
+      });
+
+      it('renotifying one person needs a person, and checks what start checks', function () {
+        expect(thrown(function () { world.svc.renotifyUser(world.SN_INCIDENT, '', world.SN_USER); })).toContain('choose a responder');
+        expect(thrown(function () { world.svc.renotifyUser('no-such-incident', 'U9', world.SN_USER); })).toContain('out of context');
+        expect(thrown(function () { world.svc.renotifyUser(world.SN_INCIDENT, 'U9', 'nobody'); })).toContain('not mapped');
+      });
+
+      it('renotifying one person reports a PagerDuty failure', function () {
+        world.pd.postFails = true;
+        expect(thrown(function () { world.svc.renotifyUser(world.SN_INCIDENT, 'U9', world.SN_USER); })).not.toBe('');
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>1fa702218d5211a8b3ac5db87323fa27</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>ec1e6831e604adf11f8e67de43bec448</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>35525e51b012d8dabcd1b88ee21f5e91</update_guid>
+    <update_guid_history>35525e51b012d8dabcd1b88ee21f5e91:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>1a79b4c5c836f906eaadeff0a8ae8f6c</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_313d5db74231b14f38c494b41ce1bc80</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify webhook - the Business Rule feeds the run">844c564e5dedbc71dc870e8b2d225927</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>313d5db74231b14f38c494b41ce1bc80</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_313d5db74231b14f38c494b41ce1bc80</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=313d5db74231b14f38c494b41ce1bc80"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>313d5db74231b14f38c494b41ce1bc80</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>6babeb0739792b9fe2b37167df17291d</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var kit = new x_pd_integration.PagerDutyRenotifyTestKit();
+    var world;
+    var inserted;
+
+    // Inserts a row the way the inbound webhook handling does, which is what the Business Rule listens to
+    var receive = function (payload) {
+      var row = new GlideRecord('x_pd_integration_webhook_import');
+      row.initialize();
+      row.setValue('message_type', payload.event_type);
+      row.setValue('payload', typeof payload === 'string' ? payload : JSON.stringify(payload));
+      var id = row.insert();
+      if (id) { inserted.push(id); }
+      return id;
+    };
+
+    describe('Renotify webhook: the Business Rule feeds the run', function () {
+      beforeEach(function () {
+        inserted = [];
+        world = kit.world();
+        world.start();
+      });
+      afterEach(function () {
+        world.cleanup();
+        inserted.forEach(function (id) {
+          var row = new GlideRecord('x_pd_integration_webhook_import');
+          if (row.get(id)) { row.deleteRecord(); }
+        });
+      });
+
+      it('a responder joining ends the run', function () {
+        expect(receive(kit.replyEvent(world.pd.incidentId, 'A', 'joined', world.now() + 1000))).toBeTruthy();
+        expect(world.run().getValue('state')).toBe('joined');
+        expect(world.run().getValue('active')).toBe('0');
+      });
+
+      it('the incident being resolved ends the run', function () {
+        receive(kit.resolvedEvent(world.pd.incidentId));
+        expect(world.run().getValue('state')).toBe('resolved');
+      });
+
+      it('a reply about another incident leaves the run alone', function () {
+        receive(kit.replyEvent(world.pd.incidentId + 'X', 'A', 'joined', world.now() + 1000));
+        expect(world.run().getValue('state')).toBe('active');
+      });
+
+      it('a reply from someone who is not on the current level leaves the run alone', function () {
+        receive(kit.replyEvent(world.pd.incidentId, 'B', 'joined', world.now() + 1000));
+        expect(world.run().getValue('state')).toBe('active');
+      });
+
+      it('other events leave the run alone', function () {
+        receive({ event_type: 'incident.acknowledged', data: { id: world.pd.incidentId } });
+        expect(world.run().getValue('state')).toBe('active');
+      });
+
+      it('a payload that cannot be read does not stop the row from being saved, and leaves the run alone', function () {
+        var row = new GlideRecord('x_pd_integration_webhook_import');
+        row.initialize();
+        row.setValue('message_type', 'incident.responder.replied');
+        row.setValue('payload', '{ not json');
+        var id = row.insert();
+        if (id) { inserted.push(id); }
+        expect(id).toBeTruthy();
+        expect(world.run().getValue('state')).toBe('active');
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>313d5db74231b14f38c494b41ce1bc80</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>1bc278f60695b868eb03afdd48cd9e36</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>243c643c9bb5e6f9aa5ca5a3c1af9a33</update_guid>
+    <update_guid_history>243c643c9bb5e6f9aa5ca5a3c1af9a33:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>a4c1822b6d1e57d878dcf13de602edad</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_6fd3d0a72d3fbd5d9e6c654fb11775c1</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify run - start">37a1616a0b8179486003b81acf878ba9</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>6fd3d0a72d3fbd5d9e6c654fb11775c1</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_6fd3d0a72d3fbd5d9e6c654fb11775c1</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=6fd3d0a72d3fbd5d9e6c654fb11775c1"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>6fd3d0a72d3fbd5d9e6c654fb11775c1</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>cbad10399270187b1cd696fb1266086f</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var kit = new x_pd_integration.PagerDutyRenotifyTestKit();
+    var world;
+    var thrown = function (fn) {
+      try { fn(); } catch (e) { return String(e.message || e); }
+      return '';
+    };
+
+    describe('Renotify run: start', function () {
+      beforeEach(function () { world = kit.world(); });
+      afterEach(function () { world.cleanup(); });
+
+      it('requests only level 1, as the user who clicked, and records an active run', function () {
+        var started = world.start();
+        expect(started.policyName).toBe('ATF policy');
+        expect(world.pd.requests.length).toBe(1);
+        expect(world.pd.requests[0].users).toEqual(['A']);
+        expect(world.pd.requests[0].requester).toBe('REQ');
+        expect(world.pd.requests[0].from).toBe('req@example.com');
+        var run = world.run();
+        expect(run.getValue('state')).toBe('active');
+        expect(run.getValue('active')).toBe('1');
+        expect(run.getValue('level')).toBe('1');
+        expect(run.getValue('loop')).toBe('0');
+        expect(run.getValue('policy_name')).toBe('ATF policy');
+        expect(run.getValue('pd_policy_id')).toBe(world.pd.policy.id);
+        expect(run.getValue('pd_incident_id')).toBe(world.pd.incidentId);
+        expect(run.getValue('requester_pd_id')).toBe('REQ');
+        expect(run.getValue('pending_actions')).toBeFalsy();
+      });
+
+      it('keeps everything it needs to continue in the run', function () {
+        world.start();
+        var saved = JSON.parse(world.run().getValue('run_json'));
+        expect(saved.rules.length).toBe(3);
+        expect(saved.policyId).toBe(world.pd.policy.id);
+        expect(saved.phase).toBe('waiting');
+      });
+
+      it('asks PagerDuty for on-calls with a query the platform accepts, and only for this policy', function () {
+        world.pd.oncalls = [kit.oncall(1, 'A')];
+        world.start();
+        expect(world.run().getValue('state')).toBe('active');
+        expect(world.requestedUsers()).toEqual([['A']]);
+      });
+
+      it('refuses a second run for the same incident and policy while one is active', function () {
+        world.start();
+        expect(thrown(function () { world.start(); })).toContain('already being renotified');
+        expect(world.pd.requests.length).toBe(1);
+      });
+
+      it('rejects a user with no PagerDuty mapping before anything is sent', function () {
+        var message = thrown(function () { world.svc.start(world.SN_INCIDENT, world.pd.policy.id, 'nobody'); });
+        expect(message).toContain('not mapped');
+        expect(world.pd.requests.length).toBe(0);
+      });
+
+      it('rejects an incident that does not exist, or is not linked to PagerDuty', function () {
+        expect(thrown(function () { world.svc.start('no-such-incident', world.pd.policy.id, world.SN_USER); })).toContain('out of context');
+        var unlinked = new x_pd_integration.PagerDutyRenotify({ incident: function () { return ''; } });
+        expect(thrown(function () { unlinked.start('x', world.pd.policy.id, world.SN_USER); })).toContain('not linked to PagerDuty');
+      });
+
+      it('puts the person clicking on level 1 into a separate request made on behalf of another user', function () {
+        world.pd.oncalls = [kit.oncall(1, 'REQ'), kit.oncall(1, 'A'), kit.oncall(2, 'B')];
+        world.start();
+        expect(world.pd.requests.length).toBe(2);
+        expect(world.pd.requests[0]).toEqual({ users: ['A'], requester: 'REQ', from: 'req@example.com' });
+        expect(world.pd.requests[1]).toEqual({ users: ['REQ'], requester: 'DEFAULT', from: 'default@example.com' });
+      });
+
+      it('with no other user to ask on behalf of, still sends the request and carries on', function () {
+        world = kit.world({ defaultUser: '' });
+        world.pd.oncalls = [kit.oncall(1, 'REQ'), kit.oncall(2, 'B')];
+        world.start();
+        expect(world.pd.requests.length).toBe(1);
+        expect(world.run().getValue('state')).toBe('active');
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>6fd3d0a72d3fbd5d9e6c654fb11775c1</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>97e5dd63c69c4fcf52347e358fbf8cc8</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>a88e6c997fc0a7f6f0413356976bf7bc</update_guid>
+    <update_guid_history>a88e6c997fc0a7f6f0413356976bf7bc:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>5de7a5d845a4aa1bf02aa220c59a4b8d</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_834dcb83e5ddb932a6e2e6e72384723c</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify machine - timeouts, loops and the end">b85f7b5dde019a7dbea5676b1d0f7837</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>834dcb83e5ddb932a6e2e6e72384723c</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_834dcb83e5ddb932a6e2e6e72384723c</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=834dcb83e5ddb932a6e2e6e72384723c"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>834dcb83e5ddb932a6e2e6e72384723c</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>43087e319e2e4812dacd146d646b2aac</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var kit = new x_pd_integration.PagerDutyRenotifyTestKit();
+    var policy = function (delays, numLoops) {
+      return { num_loops: numLoops || 0, escalation_rules: delays.map(function (d) { return { escalation_delay_in_minutes: d }; }) };
+    };
+    var abc = function () {
+      return kit.machine(policy([15, 15, 15], 3), function () { return [kit.oncall(1, 'A'), kit.oncall(2, 'B'), kit.oncall(3, 'C')]; });
+    };
+
+    describe('Renotify machine: timeouts, loops and the end', function () {
+      it('moves on only after the level delay', function () {
+        var r = abc().start().at(14).tick();
+        expect(r.requests.length).toBe(1);
+        r.at(15).tick();
+        expect(r.requests[1]).toEqual({ atMin: 15, userIds: ['B'] });
+      });
+
+      it('repeats the levels for the policy\'s loops and then is exhausted: 3 levels x (1 + 3 loops) = 12 requests', function () {
+        var r = abc().start();
+        for (var m = 15; m &lt;= 15 * 12; m += 15) { r.at(m).tick(); }
+        expect(r.requests.length).toBe(12);
+        expect(r.run().state).toBe('exhausted');
+        expect(r.run().loop).toBe(3);
+        expect(r.requests[3].userIds).toEqual(['A']);
+      });
+
+      it('a policy with no rules is exhausted at once', function () {
+        var r = kit.machine(policy([]), function () { return []; }).start();
+        expect(r.run().state).toBe('exhausted');
+      });
+
+      it('resolves the people on call when each level is reached, so a shift change counts', function () {
+        var onCall = 'A';
+        var r = kit.machine(policy([10, 10]), function (level) { return [kit.oncall(level, level === 1 ? 'A' : onCall)]; }).start();
+        onCall = 'NEW';
+        r.at(10).tick();
+        expect(r.users()).toEqual([['A'], ['NEW']]);
+      });
+
+      it('skips a level with nobody on call', function () {
+        var r = kit.machine(policy([10, 10, 10]), function (level) { return level === 2 ? [] : [kit.oncall(level, 'U' + level)]; }).start();
+        r.at(10).tick();
+        expect(r.requests).toEqual([{ atMin: 0, userIds: ['U1'] }, { atMin: 10, userIds: ['U3'] }]);
+      });
+
+      it('stops when the incident is resolved', function () {
+        var r = abc().start().resolveIncident();
+        expect(r.run().state).toBe('resolved');
+        r.at(99).tick();
+        expect(r.requests.length).toBe(1);
+      });
+
+      it('counts a level as due when its delay expired, not when the timer noticed', function () {
+        var r = abc().start().at(20).tick();
+        expect(r.run().resolveStartedAt).toBe(15 * kit.MINUTE);
+        var second = abc().start().at(15).tick().at(40).tick();
+        expect(second.run().resolveStartedAt).toBe(30 * kit.MINUTE);
+      });
+
+      it('counts a level as due when PagerDuty stamped the decline, unless that is missing or in the future', function () {
+        expect(abc().start().at(5).reply('A', 'declined', 2).run().resolveStartedAt).toBe(2 * kit.MINUTE);
+        expect(abc().start().at(5).reply('A', 'declined').run().resolveStartedAt).toBe(5 * kit.MINUTE);
+        expect(abc().start().at(5).reply('A', 'declined', 9).run().resolveStartedAt).toBe(5 * kit.MINUTE);
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>834dcb83e5ddb932a6e2e6e72384723c</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>f44826b85cbc2eebdfc229b9c12d6659</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>e0419f4f8d521dc26b1e3e112c20088d</update_guid>
+    <update_guid_history>e0419f4f8d521dc26b1e3e112c20088d:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>2c6279123a76358d75e88221dedad4cd</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_d2501f142db58800a9ffb1a2618a5bff</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify machine - levels, joins and declines">a99823efdc2c7de58feaa73fe3f11af5</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>d2501f142db58800a9ffb1a2618a5bff</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_d2501f142db58800a9ffb1a2618a5bff</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=d2501f142db58800a9ffb1a2618a5bff"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>d2501f142db58800a9ffb1a2618a5bff</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>f80e59f1eefddb8027c8201230882b25</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var kit = new x_pd_integration.PagerDutyRenotifyTestKit();
+    var policy = function (delays, numLoops) {
+      return { num_loops: numLoops || 0, escalation_rules: delays.map(function (d) { return { escalation_delay_in_minutes: d }; }) };
+    };
+    var abc = function () {
+      return kit.machine(policy([15, 15, 15], 3), function () { return [kit.oncall(1, 'A'), kit.oncall(2, 'B'), kit.oncall(3, 'C')]; });
+    };
+
+    describe('Renotify machine: levels, joins and declines', function () {
+      it('starts at level 1 and requests only that level', function () {
+        var r = abc().start();
+        expect(r.requests).toEqual([{ atMin: 0, userIds: ['A'] }]);
+        expect(r.run().phase).toBe('waiting');
+      });
+
+      it('a join stops the run and requests nothing else, however long it waits', function () {
+        var r = abc().start().at(3).reply('A', 'joined');
+        expect(r.run().state).toBe('joined');
+        r.at(99).tick();
+        expect(r.users()).toEqual([['A']]);
+      });
+
+      it('a decline requests the next level immediately', function () {
+        var r = abc().start().at(2).reply('A', 'declined');
+        expect(r.requests[1]).toEqual({ atMin: 2, userIds: ['B'] });
+      });
+
+      it('a cancelled request counts as a decline', function () {
+        var r = abc().start().at(1).reply('A', 'user_cancelled');
+        expect(r.requests[1].userIds).toEqual(['B']);
+      });
+
+      it('a level with two people waits until both decline, and stops when either joins', function () {
+        var twoOnFirst = function () {
+          return kit.machine(policy([10, 10]), function (level) { return level === 1 ? [kit.oncall(1, 'A1'), kit.oncall(1, 'A2')] : [kit.oncall(2, 'B')]; }).start();
+        };
+        var declined = twoOnFirst().at(1).reply('A1', 'declined');
+        expect(declined.requests.length).toBe(1);
+        declined.at(2).reply('A2', 'declined');
+        expect(declined.requests[1].userIds).toEqual(['B']);
+
+        var joined = twoOnFirst().at(1).reply('A1', 'declined').at(2).reply('A2', 'joined');
+        expect(joined.run().state).toBe('joined');
+        expect(joined.requests.length).toBe(1);
+      });
+
+      it('ignores a reply from someone who is not on the current level', function () {
+        var r = abc().start().at(15).tick().at(16).reply('A', 'joined');
+        expect(r.run().state).toBe('active');
+      });
+
+      it('ignores a reply that predates the request it would answer', function () {
+        var r = abc().start().at(15).tick();
+        r.at(16).reply('B', 'joined', 5);
+        expect(r.run().state).toBe('active');
+        r.at(17).reply('B', 'joined', 16);
+        expect(r.run().state).toBe('joined');
+      });
+
+      it('starts over whatever happened before: asks A, then B, then C even though A had declined earlier', function () {
+        var r = abc().start().at(4).reply('A', 'declined').at(19).tick();
+        expect(r.users()).toEqual([['A'], ['B'], ['C']]);
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>d2501f142db58800a9ffb1a2618a5bff</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>d26cfd4c916f368b7ca634c8dd78bda8</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>28ce0a50b173cf427365c72f9f8ef828</update_guid>
+    <update_guid_history>28ce0a50b173cf427365c72f9f8ef828:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>bc802a99a6f7c3bb3e8e313f8035e404</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_d82d83be1a48f71940558829893025da</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify run - replies, timeouts and the end">4d386c8db5d8b0e3805312a9d3202f13</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>d82d83be1a48f71940558829893025da</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_d82d83be1a48f71940558829893025da</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=d82d83be1a48f71940558829893025da"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>d82d83be1a48f71940558829893025da</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>cc9fd5a17e8a14c0412708deca71a5f3</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var kit = new x_pd_integration.PagerDutyRenotifyTestKit();
+    var world;
+
+    describe('Renotify run: replies, timeouts and the end', function () {
+      beforeEach(function () { world = kit.world(); });
+      afterEach(function () { world.cleanup(); });
+
+      it('a decline queues the follow-up, and running it requests level 2 once', function () {
+        world.start();
+        world.reply('A', 'declined');
+        expect(world.queuedCount()).toBe(1);
+        world.flushQueued().flushQueued();
+        expect(world.requestedUsers()).toEqual([['A'], ['B']]);
+        expect(world.run().getValue('level')).toBe('2');
+      });
+
+      it('a duplicate delivery of the same webhook does not request level 2 twice', function () {
+        world.start();
+        world.reply('A', 'declined').reply('A', 'declined');
+        world.flushQueued();
+        expect(world.requestedUsers()).toEqual([['A'], ['B']]);
+      });
+
+      it('two people on a level replying before the follow-up runs still advance exactly once', function () {
+        world.pd.oncalls = [kit.oncall(1, 'A1'), kit.oncall(1, 'A2'), kit.oncall(2, 'B')];
+        world.start();
+        world.reply('A1', 'declined', 1000).reply('A2', 'declined', 1500);
+        world.flushQueued();
+        expect(world.requestedUsers()).toEqual([['A1', 'A2'], ['B']]);
+      });
+
+      it('a join stops the run and nothing more is ever requested', function () {
+        world.start();
+        world.reply('A', 'joined');
+        expect(world.queuedCount()).toBe(0);
+        expect(world.run().getValue('state')).toBe('joined');
+        expect(world.run().getValue('active')).toBe('0');
+        world.advance(60).tick();
+        expect(world.pd.requests.length).toBe(1);
+      });
+
+      it('ignores a reply that predates the request it would answer', function () {
+        world.start();
+        world.advance(1);
+        world.reply('A', 'joined', -600000);
+        expect(world.run().getValue('state')).toBe('active');
+      });
+
+      it('moves to the next level only after the level\'s delay has passed', function () {
+        world.start();
+        world.advance(14).tick();
+        expect(world.pd.requests.length).toBe(1);
+        world.advance(1).tick();
+        expect(world.requestedUsers()).toEqual([['A'], ['B']]);
+      });
+
+      it('resolves the people on call when the level is reached (a shift change)', function () {
+        world.start();
+        world.pd.oncalls = [kit.oncall(1, 'A'), kit.oncall(2, 'NEW'), kit.oncall(3, 'C')];
+        world.advance(15).tick();
+        expect(world.requestedUsers()).toEqual([['A'], ['NEW']]);
+      });
+
+      it('a run that times out on its last level is saved as exhausted and stops being active', function () {
+        world.start();
+        world.advance(15).tick();
+        world.advance(15).tick();
+        world.advance(15).tick();
+        expect(world.run().getValue('state')).toBe('exhausted');
+        expect(world.run().getValue('active')).toBe('0');
+        expect(world.requestedUsers()).toEqual([['A'], ['B'], ['C']]);
+        world.advance(60).tick();
+        expect(world.pd.requests.length).toBe(3);
+      });
+
+      it('repeats the policy for its loops before it is exhausted', function () {
+        world = kit.world({ policyDelays: [1, 1], numLoops: 1, oncalls: [kit.oncall(1, 'A'), kit.oncall(2, 'B')] });
+        world.start();
+        for (var i = 0; i &lt; 3; i++) { world.advance(1).tick(); }
+        expect(world.run().getValue('state')).toBe('active');
+        expect(world.run().getValue('loop')).toBe('1');
+        world.advance(1).tick();
+        expect(world.run().getValue('state')).toBe('exhausted');
+        expect(world.requestedUsers()).toEqual([['A'], ['B'], ['A'], ['B']]);
+      });
+
+      it('a tick that changes nothing does not rewrite the run', function () {
+        world.start();
+        var before = world.run().getValue('sys_updated_on');
+        world.advance(1).tick();
+        expect(world.run().getValue('sys_updated_on')).toBe(before);
+      });
+
+      it('the incident being resolved ends the run', function () {
+        world.start();
+        world.resolve();
+        expect(world.run().getValue('state')).toBe('resolved');
+        expect(world.run().getValue('active')).toBe('0');
+        world.advance(60).tick();
+        expect(world.pd.requests.length).toBe(1);
+      });
+
+      it('a tick recovers a run left waiting after a follow-up that claimed its work and died', function () {
+        world.start();
+        world.reply('A', 'declined');
+        var stuck = world.run();
+        stuck.setValue('pending_actions', '');
+        stuck.update();
+        world.tick();
+        expect(world.requestedUsers()).toEqual([['A'], ['B']]);
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>d82d83be1a48f71940558829893025da</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>37d253f4ff2689a6b9a9881b78b62b04</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>4029de9cdf4543716c63d27e66cc79dd</update_guid>
+    <update_guid_history>4029de9cdf4543716c63d27e66cc79dd:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>8b3835c7f78830e5c9a45440a1c766e1</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_edac8495e0a027169dfcaa1b5c132a23</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify machine - people PagerDuty already asked">70c27b777aaa91ec0fa80a1ded41bd98</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>edac8495e0a027169dfcaa1b5c132a23</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_edac8495e0a027169dfcaa1b5c132a23</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=edac8495e0a027169dfcaa1b5c132a23"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>edac8495e0a027169dfcaa1b5c132a23</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>3c6124c9467ecb6e3a3ae7dacd2c06e1</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var kit = new x_pd_integration.PagerDutyRenotifyTestKit();
+    var policy = function (delays) {
+      return { num_loops: 0, escalation_rules: delays.map(function (d) { return { escalation_delay_in_minutes: d }; }) };
+    };
+    var two = function () {
+      return kit.machine(policy([15, 15]), function (level) { return [kit.oncall(level, level === 1 ? 'A' : 'B')]; });
+    };
+
+    describe('Renotify machine: people PagerDuty already asked', function () {
+      it('counts their answer from the moment PagerDuty asked them, not from when the level was requested', function () {
+        var r = two().start().at(1).reply('A', 'declined', 1).alreadyAsked({ B: 0.5 });
+        r.at(2).reply('B', 'joined', 0.8);
+        expect(r.run().state).toBe('joined');
+      });
+
+      it('still ignores an answer from before PagerDuty asked them', function () {
+        var r = two().start().at(1).reply('A', 'declined', 1).alreadyAsked({ B: 0.5 });
+        r.at(2).reply('B', 'joined', 0.2);
+        expect(r.run().state).toBe('active');
+      });
+
+      it('only knows people of the current level, and leaves the rest on the level\'s own request time', function () {
+        var r = kit.machine(policy([15, 15]), function (level) {
+          return level === 1 ? [kit.oncall(1, 'A')] : [kit.oncall(2, 'B1'), kit.oncall(2, 'B2')];
+        }).start().at(1).reply('A', 'declined', 1).alreadyAsked({ B1: 0.5, ZZ: 0 });
+        expect(r.run().askedAt).toEqual({ B1: 0.5 * kit.MINUTE });
+        r.at(2).reply('B2', 'joined', 0.8);
+        expect(r.run().state).toBe('active');
+      });
+
+      it('forgets who was asked when the next level starts', function () {
+        var r = kit.machine(policy([15, 15, 15]), function (level) { return [kit.oncall(level, ['A', 'B', 'C'][level - 1])]; })
+          .start().at(1).reply('A', 'declined', 1).alreadyAsked({ B: 0.5 });
+        expect(r.run().askedAt).toEqual({ B: 0.5 * kit.MINUTE });
+        r.at(2).reply('B', 'declined', 2);
+        expect(r.run().askedAt).toEqual({});
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>edac8495e0a027169dfcaa1b5c132a23</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>dccb864c318a58bd457561793ebbea57</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>9c889d5116ef452ef30a9e6acc8665a8</update_guid>
+    <update_guid_history>9c889d5116ef452ef30a9e6acc8665a8:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>4f4e138df809f889c45998bd6cb5156f</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_step_ff9150e778e920979fe1808a9dcf2892</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_step"><sys_atf_step action="INSERT_OR_UPDATE"><active>true</active><callable_outputs/><copied_from/><description>Run Server Side Validation Script</description><display_name>Run Server Side Script</display_name><inputs/><mugshots_cache_json/><notes/><order>1</order><step_config display_value="Run Server Side Script">41de4a935332120028bc29cac2dc349a</step_config><table/><test display_value="PD: Renotify run - people PagerDuty already asked">0643812e00e135cdb00a609d51503677</test><timeout/><warning_message/><sys_class_name>sys_atf_step</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>ff9150e778e920979fe1808a9dcf2892</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Run Server Side Script</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_step_ff9150e778e920979fe1808a9dcf2892</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_step><sys_variable_value action="delete_multiple" query="document_key=ff9150e778e920979fe1808a9dcf2892"/><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>ff9150e778e920979fe1808a9dcf2892</document_key><order>200</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>b14e61b48750f0b3cdbdebdcfcc5fd8c</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>(function(outputs, steps, params, stepResult, assertEqual) {
+    var kit = new x_pd_integration.PagerDutyRenotifyTestKit();
+    var world;
+
+    // Someone PagerDuty has asked itself, as GET /incidents/{id} reports them
+    var asked = function (userId, atMs, state) {
+      return { user: { id: userId }, state: state || 'pending', requested_at: new Date(atMs).toISOString() };
+    };
+
+    describe('Renotify run: people PagerDuty already asked', function () {
+      beforeEach(function () { world = kit.world(); });
+      afterEach(function () { world.cleanup(); });
+
+      it('does not ask again someone PagerDuty asked itself just as the level became due, but still waits for their answer', function () {
+        world.start();
+        var declinedAt = world.now() + 1000;
+        world.pd.incidentResponders = [asked('B', declinedAt)];
+        world.advance(0.2);
+        world.svc.handleReplyEvent(kit.replyEvent(world.pd.incidentId, 'A', 'declined', declinedAt));
+        world.flushQueued();
+        expect(world.requestedUsers()).toEqual([['A']]);
+        expect(world.run().getValue('level')).toBe('2');
+        world.svc.handleReplyEvent(kit.replyEvent(world.pd.incidentId, 'B', 'joined', declinedAt + 5000));
+        expect(world.run().getValue('state')).toBe('joined');
+      });
+
+      it('asks someone whose pending request is older than the moment the level became due', function () {
+        world.start();
+        world.pd.incidentResponders = [asked('B', world.now() - 600000)];
+        world.reply('A', 'declined');
+        world.flushQueued();
+        expect(world.requestedUsers()).toEqual([['A'], ['B']]);
+      });
+
+      it('asks again someone PagerDuty asked before the click: that is what Renotify is for', function () {
+        world.pd.incidentResponders = [asked('A', world.now() - 30000)];
+        world.start();
+        expect(world.requestedUsers()).toEqual([['A']]);
+      });
+
+      it('skips only the people already asked in a level with several', function () {
+        world.pd.oncalls = [kit.oncall(1, 'A'), kit.oncall(2, 'B1'), kit.oncall(2, 'B2')];
+        world.start();
+        world.pd.incidentResponders = [asked('B1', world.now() + 1000)];
+        world.reply('A', 'declined');
+        world.flushQueued();
+        expect(world.requestedUsers()).toEqual([['A'], ['B2']]);
+        expect(Object.keys(JSON.parse(world.run().getValue('run_json')).responses).sort()).toEqual(['B1', 'B2']);
+      });
+
+      it('asks someone who has already answered', function () {
+        world.start();
+        world.pd.incidentResponders = [asked('B', world.now() + 1000, 'declined')];
+        world.reply('A', 'declined');
+        world.flushQueued();
+        expect(world.requestedUsers()).toEqual([['A'], ['B']]);
+      });
+
+      it('uses the moment the delay expired, not when the timer noticed, when a level times out', function () {
+        world.start();
+        world.advance(16);
+        world.pd.incidentResponders = [asked('B', world.now() - 60000 + 500)];
+        world.tick();
+        expect(world.requestedUsers()).toEqual([['A']]);
+      });
+
+      it('asks everyone when PagerDuty cannot be read', function () {
+        world.start();
+        world.pd.incidentFails = true;
+        world.pd.incidentResponders = [asked('B', world.now() + 1000)];
+        world.reply('A', 'declined');
+        world.flushQueued();
+        expect(world.requestedUsers()).toEqual([['A'], ['B']]);
+      });
+
+      it('never skips the one-off renotify of a person', function () {
+        world.pd.incidentResponders = [asked('U9', world.now() + 1000)];
+        world.svc.renotifyUser(world.SN_INCIDENT, 'U9', world.SN_USER);
+        expect(world.requestedUsers()).toEqual([['U9']]);
+      });
+    });
+})(outputs, steps, params, stepResult, assertEqual);
+
+jasmine.getEnv().execute();
+</value><variable display_value="Test script">989d9e235324220002c6435723dc3484</variable></sys_variable_value><sys_variable_value action="INSERT_OR_UPDATE"><document>sys_atf_step</document><document_key>ff9150e778e920979fe1808a9dcf2892</document_key><order>100</order><sys_class_name>sys_variable_value</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>1bd7b1ec6711f985b14e14d877958b8c</sys_id><sys_mod_count>0</sys_mod_count><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on><value>3.1</value><variable display_value="Jasmine version">42f2564b73031300440211d8faf6a777</variable></sys_variable_value></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>Run Server Side Script</target_name>
+    <type>Test Step</type>
+    <update_domain>global</update_domain>
+    <update_guid>a3341adde1dfae347d3e5f4f5101f2b5</update_guid>
+    <update_guid_history>a3341adde1dfae347d3e5f4f5101f2b5:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>13b175baa6453fc1a5303eb1003d3f4e</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_aaa26ac99d9f78945ac8827a7cfb2881</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite"><sys_atf_test_suite action="INSERT_OR_UPDATE"><active>true</active><description>Tests of the Renotify Escalation Policy overlay. They run the real Script Includes against a fake PagerDuty and a fake clock, so no PagerDuty account, WireMock or waiting is needed. The only records they create are runs and webhook rows of their own, which they remove again. The overlay itself ("PagerDuty Renotify v…") must be installed first.</description><name>PD: Renotify</name><parent/><sys_class_name>sys_atf_test_suite</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>aaa26ac99d9f78945ac8827a7cfb2881</sys_id><sys_mod_count>0</sys_mod_count><sys_name>PD: Renotify</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_aaa26ac99d9f78945ac8827a7cfb2881</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>PD: Renotify</target_name>
+    <type>Test Suite</type>
+    <update_domain>global</update_domain>
+    <update_guid>f155d5478694acec6356a8a969ee48d4</update_guid>
+    <update_guid_history>f155d5478694acec6356a8a969ee48d4:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>02f6ed7b112645799f548709655a06e7</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_5e5f55663809fab052b0417abfc9604e</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>100</order><test display_value="PD: Renotify install - the overlay's records are in place">302cfe31be684e8952274cde0f5491e1</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>5e5f55663809fab052b0417abfc9604e</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_5e5f55663809fab052b0417abfc9604e</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>45a136a248b37dd3bd16c71ad6c18f7f</update_guid>
+    <update_guid_history>45a136a248b37dd3bd16c71ad6c18f7f:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>0c9564882bd63c43fd77896ac10c0577</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_d0e011f987ea62d8743e2ffd305ce94c</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>200</order><test display_value="PD: Renotify machine - levels, joins and declines">a99823efdc2c7de58feaa73fe3f11af5</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>d0e011f987ea62d8743e2ffd305ce94c</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_d0e011f987ea62d8743e2ffd305ce94c</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>303faf2bc9bf2ac76996e914f89bfbf4</update_guid>
+    <update_guid_history>303faf2bc9bf2ac76996e914f89bfbf4:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>2a0dccae5d9cb82281bc7494fe80eb05</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_e62087d439c3e5f2a729e077b0b0eda6</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>300</order><test display_value="PD: Renotify machine - timeouts, loops and the end">b85f7b5dde019a7dbea5676b1d0f7837</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>e62087d439c3e5f2a729e077b0b0eda6</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_e62087d439c3e5f2a729e077b0b0eda6</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>027636f3004aaee8af38d5f7cc818e1c</update_guid>
+    <update_guid_history>027636f3004aaee8af38d5f7cc818e1c:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>a81a50af1f2043ed9f02efd5893b75c9</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_f7e8c30c5aa6277b1fdff30159333993</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>400</order><test display_value="PD: Renotify machine - people PagerDuty already asked">70c27b777aaa91ec0fa80a1ded41bd98</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>f7e8c30c5aa6277b1fdff30159333993</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_f7e8c30c5aa6277b1fdff30159333993</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>e47a7cdd751ddf2babd5544a3154815f</update_guid>
+    <update_guid_history>e47a7cdd751ddf2babd5544a3154815f:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>eae3feb6144299984328a7b7fe8cd0e2</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_e6d411db1e357cc987103d2d75efed1d</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>500</order><test display_value="PD: Renotify run - start">37a1616a0b8179486003b81acf878ba9</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>e6d411db1e357cc987103d2d75efed1d</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_e6d411db1e357cc987103d2d75efed1d</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>eb19a8b87db54269618d8583f7e0d257</update_guid>
+    <update_guid_history>eb19a8b87db54269618d8583f7e0d257:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>5ea68b6c02e33e9bb0aa14ed33d4347b</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_12bbdad9bef3dbcbe49bf89d5a105000</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>600</order><test display_value="PD: Renotify run - replies, timeouts and the end">4d386c8db5d8b0e3805312a9d3202f13</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>12bbdad9bef3dbcbe49bf89d5a105000</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_12bbdad9bef3dbcbe49bf89d5a105000</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>da7d2b8ceb88c20833f2f0eccc515ba2</update_guid>
+    <update_guid_history>da7d2b8ceb88c20833f2f0eccc515ba2:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>02db0042772629ebbe31a27717ed09c5</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_5f757c06fe444da306f37af3dd304da6</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>700</order><test display_value="PD: Renotify run - people PagerDuty already asked">0643812e00e135cdb00a609d51503677</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>5f757c06fe444da306f37af3dd304da6</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_5f757c06fe444da306f37af3dd304da6</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>1ffa99c922e9928bf0e7761f6705134e</update_guid>
+    <update_guid_history>1ffa99c922e9928bf0e7761f6705134e:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>aaa7c8692b836df2dde0803bafa6053b</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_8dc5e1a67f1863de33fde44870bb2b58</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>800</order><test display_value="PD: Renotify run - failures, stopping and single people">b07336c17f154b33bfac6446d5fb66b1</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>8dc5e1a67f1863de33fde44870bb2b58</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_8dc5e1a67f1863de33fde44870bb2b58</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>e8a10127cd35030231a61a884d51be8b</update_guid>
+    <update_guid_history>e8a10127cd35030231a61a884d51be8b:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>9e266e4653e13f47005a5c13f2e0e39a</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+  <sys_update_xml action="INSERT_OR_UPDATE">
+    <action>INSERT_OR_UPDATE</action>
+    <application display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</application>
+    <category>customer</category>
+    <comments/>
+    <name>sys_atf_test_suite_test_7954d2487fc790628a7a604b7c8c637d</name>
+    <payload><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="yes"?><record_update table="sys_atf_test_suite_test"><sys_atf_test_suite_test action="INSERT_OR_UPDATE"><abort_on_failure>false</abort_on_failure><order>900</order><test display_value="PD: Renotify webhook - the Business Rule feeds the run">844c564e5dedbc71dc870e8b2d225927</test><test_suite display_value="PD: Renotify">aaa26ac99d9f78945ac8827a7cfb2881</test_suite><sys_class_name>sys_atf_test_suite_test</sys_class_name><sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by><sys_created_on>2026-10-09 12:00:00</sys_created_on><sys_id>7954d2487fc790628a7a604b7c8c637d</sys_id><sys_mod_count>0</sys_mod_count><sys_name>aaa26ac99d9f78945ac8827a7cfb2881</sys_name><sys_package display_value="PagerDuty Incident Resolution Platform" source="x_pd_integration">39a9d9664f834e00dd657bb28110c77b</sys_package><sys_policy/><sys_scope display_value="PagerDuty Incident Resolution Platform">39a9d9664f834e00dd657bb28110c77b</sys_scope><sys_update_name>sys_atf_test_suite_test_7954d2487fc790628a7a604b7c8c637d</sys_update_name><sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by><sys_updated_on>2026-10-09 12:00:00</sys_updated_on></sys_atf_test_suite_test></record_update>]]></payload>
+    <replace_on_upgrade>false</replace_on_upgrade>
+    <sys_mod_count>0</sys_mod_count>
+    <table/>
+    <target_name>aaa26ac99d9f78945ac8827a7cfb2881</target_name>
+    <type>Test Suite Test</type>
+    <update_domain>global</update_domain>
+    <update_guid>8bb358f971fe217d94b09a8e6797d42a</update_guid>
+    <update_guid_history>8bb358f971fe217d94b09a8e6797d42a:0</update_guid_history>
+    <update_set display_value=""/>
+    <view/>
+    <remote_update_set display_value="PagerDuty Renotify Tests v1.0.0">ee109796384223e85ff7111e64cf94a8</remote_update_set>
+    <sys_id>760d0ec38d327aead48d17810908890a</sys_id>
+    <sys_recorded_at>1a13bd032d50000001</sys_recorded_at>
+    <sys_created_by>PagerDuty_Renotify_v1.0.0</sys_created_by>
+    <sys_updated_by>PagerDuty_Renotify_v1.0.0</sys_updated_by>
+    <sys_created_on>2026-10-14 19:07:42</sys_created_on>
+    <sys_updated_on>2026-10-14 19:07:42</sys_updated_on>
+    <payload_hash>0</payload_hash>
+  </sys_update_xml>
+</unload>

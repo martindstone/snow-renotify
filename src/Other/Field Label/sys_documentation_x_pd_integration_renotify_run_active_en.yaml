@@ -1,0 +1,61 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_documentation_x_pd_integration_renotify_run_active_en
+payload:
+  record_update:
+    sys_documentation:
+      $:
+        element: active
+        label: Active
+        language: en
+        table: x_pd_integration_renotify_run
+      sys_documentation:
+        $:
+          action: INSERT_OR_UPDATE
+        element: active
+        help: ""
+        hint: ""
+        label: Active
+        language: en
+        name: x_pd_integration_renotify_run
+        plural: Active
+        sys_class_name: sys_documentation
+        sys_created_by: PagerDuty
+        sys_created_on: 2026-10-08 17:30:00
+        sys_id: 0c9cda126e69489f8c05cd4504919905
+        sys_mod_count: "0"
+        sys_name: Active
+        sys_package:
+          $:
+            display_value: PagerDuty Incident Resolution Platform
+            source: x_pd_integration
+          _: 39a9d9664f834e00dd657bb28110c77b
+        sys_policy: ""
+        sys_scope:
+          $:
+            display_value: PagerDuty Incident Resolution Platform
+          _: 39a9d9664f834e00dd657bb28110c77b
+        sys_update_name: sys_documentation_x_pd_integration_renotify_run_active_en
+        sys_updated_by: PagerDuty
+        sys_updated_on: 2026-10-08 17:30:00
+        url: ""
+        url_target: ""
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: PagerDuty Renotify Runs.Active
+type: Field Label
+update_domain: global
+update_guid: f0887d168e134782824d88fa4e1bbc96
+update_guid_history: f0887d168e134782824d88fa4e1bbc96:-1659125538
+update_set:
+  $:
+    display_value: ""
+view: ""

@@ -1,0 +1,57 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sysevent_register_a33a570bf1314793884f3dd35338be11
+payload:
+  record_update:
+    $:
+      table: sysevent_register
+    sysevent_register:
+      $:
+        action: INSERT_OR_UPDATE
+      caller_access: ""
+      derived_priority: "100"
+      description: Execute pending actions of an escalation policy renotification run
+      event_name: x_pd_integration.renotify_run
+      fired_by: PagerDutyRenotify
+      priority: "100"
+      queue: ""
+      suffix: renotify_run
+      sys_class_name: sysevent_register
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-08 17:30:00
+      sys_id: a33a570bf1314793884f3dd35338be11
+      sys_mod_count: "0"
+      sys_name: x_pd_integration.renotify_run
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_update_name: sysevent_register_a33a570bf1314793884f3dd35338be11
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-08 17:30:00
+      table: ""
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: x_pd_integration.renotify_run
+type: Event Registration
+update_domain: global
+update_guid: 1131faacd2d3434a9ff2e4e8bdab3aa4
+update_guid_history: 1131faacd2d3434a9ff2e4e8bdab3aa4:337872544
+update_set:
+  $:
+    display_value: ""
+view: ""

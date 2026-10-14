@@ -1,0 +1,61 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_documentation_x_pd_integration_renotify_run_pending_actions_en
+payload:
+  record_update:
+    sys_documentation:
+      $:
+        element: pending_actions
+        label: Pending actions (JSON)
+        language: en
+        table: x_pd_integration_renotify_run
+      sys_documentation:
+        $:
+          action: INSERT_OR_UPDATE
+        element: pending_actions
+        help: ""
+        hint: ""
+        label: Pending actions (JSON)
+        language: en
+        name: x_pd_integration_renotify_run
+        plural: Pending actions (JSON)
+        sys_class_name: sys_documentation
+        sys_created_by: PagerDuty
+        sys_created_on: 2026-10-08 17:30:00
+        sys_id: 78d4d00c09df4577b9f3cb11f85427ce
+        sys_mod_count: "0"
+        sys_name: Pending actions (JSON)
+        sys_package:
+          $:
+            display_value: PagerDuty Incident Resolution Platform
+            source: x_pd_integration
+          _: 39a9d9664f834e00dd657bb28110c77b
+        sys_policy: ""
+        sys_scope:
+          $:
+            display_value: PagerDuty Incident Resolution Platform
+          _: 39a9d9664f834e00dd657bb28110c77b
+        sys_update_name: sys_documentation_x_pd_integration_renotify_run_pending_actions_en
+        sys_updated_by: PagerDuty
+        sys_updated_on: 2026-10-08 17:30:00
+        url: ""
+        url_target: ""
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: x_pd_integration_renotify_run
+target_name: PagerDuty Renotify Runs.Pending actions (JSON)
+type: Field Label
+update_domain: global
+update_guid: 12e4200c0b084c10a3f44a0498e486cf
+update_guid_history: 12e4200c0b084c10a3f44a0498e486cf:574920474
+update_set:
+  $:
+    display_value: ""
+view: ""

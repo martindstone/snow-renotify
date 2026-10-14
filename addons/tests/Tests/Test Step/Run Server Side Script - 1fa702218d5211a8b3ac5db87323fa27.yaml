@@ -1,0 +1,105 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_step_1fa702218d5211a8b3ac5db87323fa27
+payload:
+  record_update:
+    $:
+      table: sys_atf_step
+    sys_atf_step:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      callable_outputs: ""
+      copied_from: ""
+      description: Run Server Side Validation Script
+      display_name: Run Server Side Script
+      inputs: ""
+      mugshots_cache_json: ""
+      notes: ""
+      order: "1"
+      step_config:
+        $:
+          display_value: Run Server Side Script
+        _: 41de4a935332120028bc29cac2dc349a
+      table: ""
+      test:
+        $:
+          display_value: "PD: Renotify run - failures, stopping and single people"
+        _: b07336c17f154b33bfac6446d5fb66b1
+      timeout: ""
+      warning_message: ""
+      sys_class_name: sys_atf_step
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: 1fa702218d5211a8b3ac5db87323fa27
+      sys_mod_count: "0"
+      sys_name: Run Server Side Script
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_step_1fa702218d5211a8b3ac5db87323fa27
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+    sys_variable_value:
+      - $:
+          action: delete_multiple
+          query: document_key=1fa702218d5211a8b3ac5db87323fa27
+      - $:
+          action: INSERT_OR_UPDATE
+        document: sys_atf_step
+        document_key: 1fa702218d5211a8b3ac5db87323fa27
+        order: "200"
+        sys_class_name: sys_variable_value
+        sys_created_by: PagerDuty
+        sys_created_on: 2026-10-09 12:00:00
+        sys_id: f56f7ddc6f54bc07ab4ebe3f0ed2dfe1
+        sys_mod_count: "0"
+        sys_updated_by: PagerDuty
+        sys_updated_on: 2026-10-09 12:00:00
+        value:
+          $ref: Run Server Side Script - 1fa702218d5211a8b3ac5db87323fa27.js
+        variable:
+          $:
+            display_value: Test script
+          _: 989d9e235324220002c6435723dc3484
+      - $:
+          action: INSERT_OR_UPDATE
+        document: sys_atf_step
+        document_key: 1fa702218d5211a8b3ac5db87323fa27
+        order: "100"
+        sys_class_name: sys_variable_value
+        sys_created_by: PagerDuty
+        sys_created_on: 2026-10-09 12:00:00
+        sys_id: ec1e6831e604adf11f8e67de43bec448
+        sys_mod_count: "0"
+        sys_updated_by: PagerDuty
+        sys_updated_on: 2026-10-09 12:00:00
+        value: "3.1"
+        variable:
+          $:
+            display_value: Jasmine version
+          _: 42f2564b73031300440211d8faf6a777
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: Run Server Side Script
+type: Test Step
+update_domain: global
+update_guid: 35525e51b012d8dabcd1b88ee21f5e91
+update_guid_history: 35525e51b012d8dabcd1b88ee21f5e91:0
+update_set:
+  $:
+    display_value: ""
+view: ""

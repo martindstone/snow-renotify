@@ -1,0 +1,88 @@
+$:
+  action: INSERT_OR_UPDATE
+action: INSERT_OR_UPDATE
+application:
+  &a1
+  $:
+    display_value: PagerDuty Incident Resolution Platform
+  _: 39a9d9664f834e00dd657bb28110c77b
+category: customer
+comments: ""
+name: sys_atf_test_b07336c17f154b33bfac6446d5fb66b1
+payload:
+  record_update:
+    $:
+      table: sys_atf_test
+    sys_atf_test:
+      $:
+        action: INSERT_OR_UPDATE
+      active: "true"
+      copied_from: ""
+      description: "PagerDuty failures, Stop, and renotifying one person.\r
+
+        \r
+
+        Checks that:\r
+
+        - a PagerDuty failure on start is reported and the run is marked
+        failed\r
+
+        - when PagerDuty refuses the on-calls request, the failure
+        points at the oncalls.read OAuth scope\r
+
+        - other on-calls failures do not mention the scope\r
+
+        - a failure on a later level marks the run failed and stops it\r
+
+        - cancel stops an active run and nothing more is requested\r
+
+        - cancel of a run that has already ended changes nothing\r
+
+        - renotifying one person requests just them, as the user who
+        clicked, and starts no run\r
+
+        - renotifying yourself is requested on behalf of another user,
+        because PagerDuty ignores a request you make of yourself\r
+
+        - renotifying one person needs a person, and checks what start
+        checks\r
+
+        - renotifying one person reports a PagerDuty failure"
+      enable_parameterized_testing: "false"
+      fail_on_server_error: "true"
+      name: "PD: Renotify run - failures, stopping and single people"
+      parameters: ""
+      remember: ""
+      sn_atf_tg_generated: "false"
+      sys_class_name: sys_atf_test
+      sys_created_by: PagerDuty
+      sys_created_on: 2026-10-09 12:00:00
+      sys_id: b07336c17f154b33bfac6446d5fb66b1
+      sys_mod_count: "0"
+      sys_name: "PD: Renotify run - failures, stopping and single people"
+      sys_package:
+        $:
+          display_value: PagerDuty Incident Resolution Platform
+          source: x_pd_integration
+        _: 39a9d9664f834e00dd657bb28110c77b
+      sys_policy: ""
+      sys_scope: *a1
+      sys_update_name: sys_atf_test_b07336c17f154b33bfac6446d5fb66b1
+      sys_updated_by: PagerDuty
+      sys_updated_on: 2026-10-09 12:00:00
+    sys_variable_value:
+      $:
+        action: delete_multiple
+        query: document_key=b07336c17f154b33bfac6446d5fb66b1
+replace_on_upgrade: "false"
+sys_mod_count: "0"
+table: ""
+target_name: "PD: Renotify run - failures, stopping and single people"
+type: Test
+update_domain: global
+update_guid: 81dde49dca0f8db067507bb2b618d3c4
+update_guid_history: 81dde49dca0f8db067507bb2b618d3c4:0
+update_set:
+  $:
+    display_value: ""
+view: ""

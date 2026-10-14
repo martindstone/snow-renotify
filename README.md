@@ -1,4 +1,4 @@
-# pd-ep-renotify
+# PagerDuty Renotify -- renotify escalation policies from ServiceNow
 
 Renotify an escalation policy (EP) on a PagerDuty incident from ServiceNow, level by level, as if the EP
 were being added for the first time. PagerDuty cannot do this reliably (re-adding an EP only re-requests

@@ -21,6 +21,8 @@ PagerDutyRenotify.prototype = {
   TABLE: 'x_pd_integration_renotify_run',
   EVENT: 'x_pd_integration.renotify_run',
   MAX_ONCALL_PAGES: 5,
+  RETENTION_PROPERTY: 'x_pd_integration.renotify_run_retention_days', // 0 keeps finished runs for ever; not shipped as a record, the default is below
+  DEFAULT_RETENTION_DAYS: 30,
   REQUESTED_TOLERANCE_MS: 1000, // clock difference allowed between PagerDuty's timestamps and the moment a level became due
 
   /**
@@ -185,6 +187,55 @@ PagerDutyRenotify.prototype = {
         this._apply(runs, result.run, actions);
       }
       this.flush(runs.getUniqueValue());
+    }
+    this._purgeOnceADay();
+  },
+
+  /**
+   * Deletes finished runs that have not changed for the retention period (property x_pd_integration.renotify_run_retention_days,
+   * 30 days by default, 0 keeps them for ever). Active runs are never touched.
+   * @param {Number} [retentionDays] overrides the property
+   * @param {String} [pdIncidentId] only runs on this PagerDuty incident (tests use it to leave other runs alone)
+   * @returns {Number} how many runs were deleted
+   */
+  purgeFinishedRuns: function (retentionDays, pdIncidentId) {
+    var days = retentionDays !== undefined ? retentionDays : this._retentionDays();
+    if (!(days > 0)) {
+      return 0;
+    }
+    var cutoff = new Date(this._now() - days * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+    var finished = new GlideRecord(this.TABLE);
+    finished.addQuery('active', false);
+    finished.addQuery('sys_updated_on', '<', cutoff);
+    if (pdIncidentId) {
+      finished.addQuery('pd_incident_id', pdIncidentId);
+    }
+    finished.query();
+    var count = finished.getRowCount();
+    if (count > 0) {
+      finished.deleteMultiple();
+    }
+    return count;
+  },
+
+  _retentionDays: function () {
+    var days = Number(gs.getProperty(this.RETENTION_PROPERTY, String(this.DEFAULT_RETENTION_DAYS)));
+    return isNaN(days) ? this.DEFAULT_RETENTION_DAYS : days;
+  },
+
+  /** The tick runs every minute: only look for old runs in the first minutes after 03:00 UTC, and never let that break the tick. */
+  _purgeOnceADay: function () {
+    var now = new Date(this._now());
+    if (now.getUTCHours() !== 3 || now.getUTCMinutes() >= 5) {
+      return;
+    }
+    try {
+      var deleted = this.purgeFinishedRuns();
+      if (deleted) {
+        gs.info('PagerDutyRenotify purged {0} finished renotification run(s)', deleted);
+      }
+    } catch (ex) {
+      gs.warn('PagerDutyRenotify could not purge old runs: {0}', ex.message);
     }
   },
 

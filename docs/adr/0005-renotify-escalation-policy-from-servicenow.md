@@ -79,5 +79,8 @@ Implementation:
   overwrite `run_json`. Runs are short and few, so this is accepted.
 - Timing is bounded by the one-minute job: a level timeout fires up to a minute late. Declines and
   joins are handled immediately through the event.
+- The tick job is the only thing that notices a level timing out (PagerDuty sends no event for that) and that recovers a run left
+  waiting, so it must stay active. It also deletes finished runs older than a retention period (30 days by default, once a day), so the
+  run table does not grow without bound.
 - Each level requested counts against PagerDuty's limit of 1,000 responder requests per incident.
 - Reply handling depends on the `incident.responder.*` v3 webhook events reaching ServiceNow.

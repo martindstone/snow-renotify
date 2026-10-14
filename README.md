@@ -58,9 +58,13 @@ blocks save and the healthcheck when a requested scope has not been granted, so 
 until they re-authorized. If the scope is missing, a run fails with a message that names it (PagerDuty answers the on-calls request
 with 401 or 403), and the dialog shows that message.
 
+**Housekeeping.** The tick also deletes finished runs that have not changed for 30 days. It looks for them once a day, in the first
+minutes after 03:00 UTC, and never touches a run that is still active. To change the period, create the system property
+`x_pd_integration.renotify_run_retention_days` (the overlay does not ship it) with a number of days; `0` keeps finished runs for ever.
+
 ## Known limits
 
-- A level's delay is checked by a job that runs every minute, so a timeout can fire up to about a minute late.
+- A level's delay is checked by a job that runs every minute, so a timeout can fire up to about a minute late. **The job (`PagerDuty Renotify Tick`) must stay active:** if it is disabled, or deactivated by an instance clone, replies still advance a run immediately but timeouts, loops, recovery of a stuck run and the daily purge all stop.
 - A duplicate text is still possible if PagerDuty's own escalation fires just after our check, or its timing is not aligned with ours.
 - Whatever has already been requested stays requested when a run is stopped, resolved or fails; nothing is cancelled in PagerDuty.
 - The overlay's two ACLs (dialog and controller) cannot be removed over REST; removing them (and the version history) needs

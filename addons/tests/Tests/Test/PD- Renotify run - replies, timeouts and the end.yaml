@@ -53,6 +53,9 @@ payload:
 
         - the incident being resolved ends the run\r
 
+        - purges finished runs after the retention period, never an
+        active run or a young one\r
+
         - a tick recovers a run left waiting after a follow-up that
         claimed its work and died"
       enable_parameterized_testing: "false"

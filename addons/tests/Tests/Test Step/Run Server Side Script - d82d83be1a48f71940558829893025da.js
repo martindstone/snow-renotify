@@ -101,6 +101,20 @@
         expect(world.pd.requests.length).toBe(1);
       });
 
+      it('purges finished runs after the retention period, never an active run or a young one', function () {
+        world.start();
+        var days = function (n) { return n * 24 * 60; };
+        world.advance(days(40));
+        expect(world.svc.purgeFinishedRuns(30, world.pd.incidentId)).toBe(0);   // still active
+        expect(world.run().isValidRecord()).toBe(true);
+        world.reply('A', 'joined');
+        expect(world.svc.purgeFinishedRuns(60, world.pd.incidentId)).toBe(0);   // changed only moments before the fake "now"... but within 60 days
+        expect(world.svc.purgeFinishedRuns(0, world.pd.incidentId)).toBe(0);    // 0 keeps everything
+        expect(world.run().isValidRecord()).toBe(true);
+        expect(world.svc.purgeFinishedRuns(30, world.pd.incidentId)).toBe(1);   // 40 days on, past 30
+        expect(world.run().isValidRecord()).toBe(false);
+      });
+
       it('a tick recovers a run left waiting after a follow-up that claimed its work and died', function () {
         world.start();
         world.reply('A', 'declined');

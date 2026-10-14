@@ -195,6 +195,51 @@ const reply = (user, state, atMs) => ({ event_type: 'incident.responder.replied'
     assert.strictEqual(w.pd.requests.length, 1);
   });
 
+  it('purgeFinishedRuns deletes finished runs older than the retention period, never active ones or young ones', () => {
+    const insert = (fields) => {
+      const g = new w.ctx.GlideRecord('x_pd_integration_renotify_run');
+      g.initialize();
+      Object.keys(fields).forEach((k) => g.setValue(k, fields[k]));
+      g.insert();
+      g.row.sys_updated_on = fields.sys_updated_on;
+    };
+    const when = (daysAgo) => new Date(clock - daysAgo * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+    insert({ pd_incident_id: 'I1', state: 'joined', active: false, sys_updated_on: when(40) });
+    insert({ pd_incident_id: 'I2', state: 'active', active: true, sys_updated_on: when(40) });
+    insert({ pd_incident_id: 'I3', state: 'joined', active: false, sys_updated_on: when(2) });
+    assert.strictEqual(svc.purgeFinishedRuns(0), 0, '0 keeps everything');
+    assert.strictEqual(svc.purgeFinishedRuns(30), 1, 'only the old finished one');
+    assert.deepStrictEqual(w.rowsOf('x_pd_integration_renotify_run').map((r) => r.pd_incident_id), ['I2', 'I3']);
+    assert.strictEqual(svc.purgeFinishedRuns(30, 'I3'), 0);
+    assert.strictEqual(svc.purgeFinishedRuns(1, 'I3'), 1, 'limited to one incident');
+  });
+
+  it('purgeFinishedRuns uses the property, then 30 days, and ignores a value that is not a number', () => {
+    w.pd.policy = { id: 'EP', name: 'x', num_loops: 0, escalation_rules: [{ escalation_delay_in_minutes: 1 }] };
+    svc.start(w.snIncidentId, 'EP', 'snuser');
+    svc.handleReplyEvent(reply('A', 'joined', clock + 1000));
+    w.rowsOf('x_pd_integration_renotify_run')[0].sys_updated_on = new Date(clock - 40 * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+    w.props['x_pd_integration.renotify_run_retention_days'] = '60';
+    assert.strictEqual(svc.purgeFinishedRuns(), 0, 'kept: 40 days is within 60');
+    w.props['x_pd_integration.renotify_run_retention_days'] = 'soon';
+    assert.strictEqual(svc.purgeFinishedRuns(), 1, 'falls back to 30 days');
+  });
+
+  it('the tick purges only in the first minutes after 03:00 UTC, and a failing purge does not break it', () => {
+    svc.start(w.snIncidentId, 'EP', 'snuser');
+    svc.handleReplyEvent(reply('A', 'joined', clock + 1000));
+    w.rowsOf('x_pd_integration_renotify_run')[0].sys_updated_on = '2026-01-01 00:00:00';
+    clock = Date.UTC(2026, 9, 14, 12, 0, 0); svc.tick();
+    assert.strictEqual(w.rowsOf('x_pd_integration_renotify_run').length, 1, 'noon: nothing is purged');
+    clock = Date.UTC(2026, 9, 14, 3, 6, 0); svc.tick();
+    assert.strictEqual(w.rowsOf('x_pd_integration_renotify_run').length, 1, '03:06 is outside the window');
+    svc.purgeFinishedRuns = () => { throw new Error('boom'); };
+    clock = Date.UTC(2026, 9, 14, 3, 1, 0); svc.tick();                      // must not throw
+    delete svc.purgeFinishedRuns;
+    svc.tick();
+    assert.strictEqual(w.rowsOf('x_pd_integration_renotify_run').length, 0, '03:01 purges');
+  });
+
   it('tick can be limited to one PagerDuty incident, leaving other runs alone', () => {
     svc.start(w.snIncidentId, 'EP', 'snuser');
     advance(15); svc.tick('SOMEONE-ELSE');
